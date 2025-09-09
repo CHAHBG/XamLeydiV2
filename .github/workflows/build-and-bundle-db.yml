@@ -1,0 +1,351 @@
+name: Build prebuilt DB and (optional) EAS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release
+
+jobs:
+  build-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate seed SQL from JSON
+        run: npm run generate-seed-sql
+
+      - name: Install sqlite3
+        run: npm install sqlite3
+
+      - name: Import seed SQL into prebuilt DB
+        run: node scripts/import_seed_sql.js
+
+      - name: Upload prebuilt DB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuilt-db
+          path: prebuilt/parcelapp.db
+
+  eas-build:
+    needs: build-db
+    runs-on: ubuntu-latest
+    if: ${{ secrets.EAS_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Configure EAS auth
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          eas whoami || eas login --token $EAS_TOKEN
+
+      - name: Trigger EAS build (android apk, production profile)
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          eas build --platform android --profile production --non-interactive
+
+      - name: Wait for EAS build and download APK
+        id: download_artifacts
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          set -e
+          echo "Waiting for the build to finish and downloading artifact..."
+          BUILD_JSON=$(eas build --platform android --profile production --non-interactive --wait --json)
+          echo "Build json: $BUILD_JSON"
+          BUILD_ID=$(echo "$BUILD_JSON" | jq -r '.id')
+          echo "Build ID: $BUILD_ID"
+          mkdir -p artifacts
+          eas build:download --id $BUILD_ID --platform android --output ./artifacts
+          APK_PATH=$(find ./artifacts -type f -name "*.apk" | head -n1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in artifacts; listing contents:"; ls -la artifacts || true; exit 1
+          fi
+          echo "APK found at: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "eas-build-${{ github.run_id }}"
+          release_name: "EAS Build ${{ github.run_id }}"
+          body: "Automated EAS build artifacts"
+          draft: false
+          prerelease: true
+
+      - name: Upload APK to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.download_artifacts.outputs.apk_path }}
+          asset_name: app-${{ github.run_id }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload EAS build logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-build-logs
+          path: .
+name: Build prebuilt DB and (optional) EAS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release
+
+jobs:
+  build-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate seed SQL from JSON
+        run: npm run generate-seed-sql
+
+      - name: Install sqlite3
+        run: npm install sqlite3
+
+      - name: Import seed SQL into prebuilt DB
+        run: node scripts/import_seed_sql.js
+
+      - name: Upload prebuilt DB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuilt-db
+          path: prebuilt/parcelapp.db
+
+  eas-build:
+    needs: build-db
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for EAS_TOKEN (skip the EAS build if not set)
+        run: |
+          echo "EAS_TOKEN is not set; this job will skip the EAS build steps."
+        if: ${{ secrets.EAS_TOKEN == '' }}
+
+      - name: Checkout
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        run: npm ci
+
+      - name: Install EAS CLI
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        run: npm install -g eas-cli
+
+      - name: Configure EAS auth
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          eas whoami || eas login --token $EAS_TOKEN
+
+      - name: Trigger EAS build (android apk, production profile)
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          eas build --platform android --profile production --non-interactive
+
+      - name: Wait for EAS build and download APK
+        id: download_artifacts
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          set -e
+          echo "Waiting for the build to finish and downloading artifact..."
+          # Trigger a blocking build and capture the build id (requires eas v3+)
+          BUILD_JSON=$(eas build --platform android --profile production --non-interactive --wait --json)
+          echo "Build json: $BUILD_JSON"
+          BUILD_ID=$(echo "$BUILD_JSON" | jq -r '.id')
+          echo "Build ID: $BUILD_ID"
+          # Download produced artifacts
+          mkdir -p artifacts
+          eas build:download --id $BUILD_ID --platform android --output ./artifacts
+          APK_PATH=$(find ./artifacts -type f -name "*.apk" | head -n1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in artifacts; listing contents:"; ls -la artifacts || true; exit 1
+          fi
+          echo "APK found at: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        if: ${{ secrets.EAS_TOKEN != '' }}
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "eas-build-${{ github.run_id }}"
+          name: Build prebuilt DB and (optional) EAS build
+
+          on:
+            workflow_dispatch:
+            push:
+              branches:
+                - release
+
+          jobs:
+            build-db:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Checkout
+                  uses: actions/checkout@v4
+
+                - name: Setup Node
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: '18'
+
+                - name: Install dependencies
+                  run: npm ci
+
+                - name: Generate seed SQL from JSON
+                  run: npm run generate-seed-sql
+
+                - name: Install sqlite3
+                  run: npm install sqlite3
+
+                - name: Import seed SQL into prebuilt DB
+                  run: node scripts/import_seed_sql.js
+
+                - name: Upload prebuilt DB artifact
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: prebuilt-db
+                    path: prebuilt/parcelapp.db
+
+            eas-build:
+              needs: build-db
+              runs-on: ubuntu-latest
+              steps:
+                - name: Skip if EAS_TOKEN is not set
+                  if: ${{ secrets.EAS_TOKEN == '' }}
+                  run: echo "EAS_TOKEN is not set; skipping EAS build job"
+
+                - name: Checkout
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  uses: actions/checkout@v4
+
+                - name: Setup Node
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: '18'
+
+                - name: Install dependencies
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  run: npm ci
+
+                - name: Install EAS CLI
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  run: npm install -g eas-cli
+
+                - name: Configure EAS auth
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  env:
+                    EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+                  run: |
+                    eas whoami || eas login --token $EAS_TOKEN
+
+                - name: Trigger EAS build (android apk, production profile)
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  env:
+                    EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+                  run: |
+                    eas build --platform android --profile production --non-interactive
+
+                - name: Wait for EAS build and download APK
+                  id: download_artifacts
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  env:
+                    EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+                  run: |
+                    set -e
+                    echo "Waiting for the build to finish and downloading artifact..."
+                    BUILD_JSON=$(eas build --platform android --profile production --non-interactive --wait --json)
+                    echo "Build json: $BUILD_JSON"
+                    BUILD_ID=$(echo "$BUILD_JSON" | jq -r '.id')
+                    echo "Build ID: $BUILD_ID"
+                    mkdir -p artifacts
+                    eas build:download --id $BUILD_ID --platform android --output ./artifacts
+                    APK_PATH=$(find ./artifacts -type f -name "*.apk" | head -n1)
+                    if [ -z "$APK_PATH" ]; then
+                      echo "No APK found in artifacts; listing contents:"; ls -la artifacts || true; exit 1
+                    fi
+                    echo "APK found at: $APK_PATH"
+                    echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+
+                - name: Create GitHub release
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  id: create_release
+                  uses: actions/create-release@v1
+                  env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  with:
+                    tag_name: "eas-build-${{ github.run_id }}"
+                    release_name: "EAS Build ${{ github.run_id }}"
+                    body: "Automated EAS build artifacts"
+                    draft: false
+                    prerelease: true
+
+                - name: Upload APK to release
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  uses: actions/upload-release-asset@v1
+                  with:
+                    upload_url: ${{ steps.create_release.outputs.upload_url }}
+                    asset_path: ${{ steps.download_artifacts.outputs.apk_path }}
+                    asset_name: app-${{ github.run_id }}.apk
+                    asset_content_type: application/vnd.android.package-archive
+
+                - name: Upload EAS build logs
+                  if: ${{ secrets.EAS_TOKEN != '' }}
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: eas-build-logs
+                    path: .

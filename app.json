@@ -1,29 +1,34 @@
 {
   "expo": {
-    "name": "ParcelApp",
-    "slug": "ParcelApp",
+    "name": "XamLeydi",
+    "slug": "XamLeydi",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
+    "icon": "./assets/xamleydi-icon-v2.png",
+    "assetBundlePatterns": [
+      "prebuilt/*",
+      "assets/*"
+    ],
     "android": {
+      "package": "com.cabgn.XamLeydi",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+        "foregroundImage": "./assets/xamleydi-icon-v2.png",
+        "backgroundColor": "#FFFFFF"
+      }
+      ,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
+        }
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/xamleydi-icon-v2.png"
+    },
+    "owner": "cabgn",
+    "extra": {
+      "eas": {
+        "projectId": "e9f527f8-4f75-4eff-b43d-2c5d5117ad7a"
+      }
     }
   }
 }

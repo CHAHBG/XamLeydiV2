@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "XamLeydi",
+    "slug": "XamLeydi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+  "icon": "./assets/xamleydi-icon-v2.png",
+    "splash": {
+  "image": "./assets/xamleydi-icon-v2.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#A02020"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.xamleydi.parcelapp",
+      "config": {
+        "googleMapsApiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Cette application utilise la caméra pour scanner les codes QR des parcelles."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+  "foregroundImage": "./assets/xamleydi-icon-v2.png",
+        "backgroundColor": "#A02020"
+      },
+      "package": "com.xamleydi.parcelapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+  "favicon": "./assets/xamleydi-icon-v2.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-location",
+      "expo-font",
+      "expo-maps",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Autoriser XamLeydi à accéder à la caméra pour scanner les codes QR des parcelles."
+        }
+      ]
+    ],
+    "owner": "cabgn",
+    "extra": {
+      "eas": {
+        "projectId": "27276450-9a75-4369-9b1f-97392ce3e38c"
+      }
+    }
+  }
+}

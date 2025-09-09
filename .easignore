@@ -1,0 +1,58 @@
+# EAS Build ignore file
+# Exclude local caches, build outputs, and generated artifacts to reduce upload size.
+
+# Node modules are reinstalled on the builder
+node_modules
+
+# Git metadata
+.git
+
+# Local IDE / OS files
+.vscode
+.idea
+.DS_Store
+
+# Expo cache / settings
+.expo
+.expo-shared
+
+# Gradle / Android build outputs
+android/.gradle
+android/build
+android/app/build
+android/**/build
+android/.cxx
+
+# iOS build outputs
+ios/build
+ios/Pods
+
+# Local build / dist folders
+dist
+build
+
+# EAS/CI artifacts and saved archives
+artifacts
+eas-artifact*.tar.gz
+*.tgz
+*.zip
+
+# Mobile binaries (APKs / AABs) - exclude if present in repo history
+*.apk
+*.aab
+
+# Temporary and test output
+coverage
+.nyc_output
+tmp
+
+# Keystores and large local secrets (do not upload sensitive material)
+*.keystore
+*.jks
+
+# Large archives that can be re-generated or are not needed for build
+*.log
+*.bak
+
+# Uncomment to keep the prebuilt DB if you rely on it during build
+# prebuilt/parcelapp.db

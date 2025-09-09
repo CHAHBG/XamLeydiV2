@@ -54,3 +54,22 @@ export interface SearchResult {
   type: 'individuel' | 'collectif';
   matchField: string;
 }
+
+// Complaint type used by complaint screens
+export interface Complaint {
+  id: string;
+  parcelNumber?: string;
+  date?: string; // ISO yyyy-mm-dd
+  activity?: string;
+  commune?: string;
+  complainantName?: string;
+  complainantSex?: string;
+  complainantId?: string;
+  complainantContact?: string;
+  complaintReason?: string;
+  complaintReceptionMode?: string;
+  complaintCategory?: string;
+  complaintDescription?: string;
+  expectedResolution?: string;
+  [key: string]: any;
+}

@@ -1,0 +1,21 @@
+export const COMMUNES = [
+  'BALLOU',
+  'GABOU',
+  'MOUDERY',
+  'BALA',
+  'KOAR',
+  'SINTHIOU MALEME',
+  'NDOGA BABACAR',
+  'NETTEBOULOU',
+  'MISSIRAH',
+  'BANDAFASSI',
+  'DINDEFELO',
+  'TOMBORONKOTO',
+  'DIMBOLI',
+  'FONGOLIMBI',
+  'MEDINA BAFFE',
+  'BEMBOU',
+  'SABODALA'
+];
+
+export default COMMUNES;

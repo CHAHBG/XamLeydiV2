@@ -1,0 +1,642 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Linking,
+  Platform,
+} from 'react-native';
+import MapView, { Polygon, Marker, Circle } from 'react-native-maps';
+
+import { Ionicons } from '@expo/vector-icons';
+import DatabaseManager from '../data/database';
+import ComplaintFormScreen from './ComplaintFormScreen';
+import collectivesParser from '../data/collectives';
+import ParcelsCollectives from '../data/Parcels_collectives.json';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+const ParcelDetailScreen = ({ route, navigation, dbReady }: any) => {
+  const { parcel, geometry, properties } = route.params || {};
+  const [showMap, setShowMap] = useState(true);
+  const [showNeighbors, setShowNeighbors] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef(null as any);
+  const [neighborParcels, setNeighborParcels] = useState([] as any[]);
+  const [affectatairesMerged, setAffectatairesMerged] = useState(null as any);
+  const [affectatairesExpanded, setAffectatairesExpanded] = useState(false);
+
+  // Parse geometry into rings for map rendering
+  const mainParcelRings = useMemo(() => {
+    try {
+      if (!geometry) return [];
+      const geom = typeof geometry === 'string' ? JSON.parse(geometry) : geometry;
+      if (!geom || !geom.type || !geom.coordinates) return [];
+
+      if (geom.type === 'Polygon' && Array.isArray(geom.coordinates[0])) {
+        const ring = geom.coordinates[0];
+        if (ring.every((c: any) => Array.isArray(c) && c.length >= 2)) {
+          return [ring.map((coord: number[]) => ({ latitude: coord[1], longitude: coord[0] }))];
+        }
+      }
+
+      if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates)) {
+        return geom.coordinates
+          .map((poly: any) => (poly[0] && poly[0].every((c: any) => Array.isArray(c) && c.length >= 2) ? poly[0].map((coord: number[]) => ({ latitude: coord[1], longitude: coord[0] })) : null))
+          .filter((ring: any) => Array.isArray(ring) && ring.length >= 3);
+      }
+    } catch (e) {
+      console.log('No valid geometry found', e);
+    }
+    return [];
+  }, [geometry]);
+
+  // Memoize neighbor polygons
+  const neighborPolygons = useMemo(() => {
+  return neighborParcels.flatMap((neighbor: any) => {
+      try {
+        const geom = typeof neighbor.geometry === 'string' ? JSON.parse(neighbor.geometry) : neighbor.geometry;
+        if (!geom || !geom.type || !geom.coordinates) return [];
+
+        if (geom.type === 'Polygon' && Array.isArray(geom.coordinates[0])) {
+          const ring = geom.coordinates[0];
+          if (ring.every((c: any) => Array.isArray(c) && c.length >= 2)) {
+            return [ring.map((coord: number[]) => ({ latitude: coord[1], longitude: coord[0] }))];
+          }
+        }
+
+        if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates)) {
+          return geom.coordinates
+            .map((poly: any) => (poly[0] && poly[0].every((c: any) => Array.isArray(c) && c.length >= 2) ? poly[0].map((coord: number[]) => ({ latitude: coord[1], longitude: coord[0] })) : null))
+            .filter((ring: any) => Array.isArray(ring) && ring.length >= 3);
+        }
+      } catch (e) {
+        console.log('Invalid neighbor geometry:', neighbor.geometry, e);
+      }
+      return [];
+    });
+  }, [neighborParcels]);
+
+  // Memoize map region calculation
+  const mapRegion = useMemo(() => {
+  if (mainParcelRings.length > 0 && mainParcelRings[0].length > 0) {
+      const coords = mainParcelRings[0];
+      const lats = coords.map((coord: { latitude: number }) => coord.latitude);
+      const lngs = coords.map((coord: { longitude: number }) => coord.longitude);
+
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+
+      return {
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLng + maxLng) / 2,
+        latitudeDelta: Math.max((maxLat - minLat) * 2.0, 0.005),
+        longitudeDelta: Math.max((maxLng - minLng) * 2.0, 0.005),
+      };
+    }
+
+    // Enhanced fallback with Senegal coordinates
+    return {
+      latitude: 14.7167,
+      longitude: -17.4677,
+      latitudeDelta: 0.1,
+      longitudeDelta: 0.1,
+    };
+  }, [mainParcelRings]);
+
+  // Compute centroid once
+  const centroid = useMemo(() => {
+    const allRings = mainParcelRings.flat();
+    if (!allRings || allRings.length === 0) return null;
+
+    let sumLat = 0;
+    let sumLng = 0;
+    allRings.forEach((coord: { latitude: number; longitude: number }) => {
+      sumLat += coord.latitude;
+      sumLng += coord.longitude;
+    });
+
+    return {
+      latitude: sumLat / allRings.length,
+      longitude: sumLng / allRings.length,
+    };
+  }, [mainParcelRings]);
+
+  // Load neighboring parcels from database
+  const loadNeighborParcels = useCallback(async () => {
+    if (!geometry || !parcel?.parcel_type || !properties?.Village) return;
+  const db = DatabaseManager;
+    if (!db.db) {
+      console.warn('loadNeighborParcels: Database is not initialized, skipping neighbor load.');
+      return;
+    }
+    try {
+      const village = properties?.Village || properties?.village;
+      if (!village) return;
+      // Get parcels from the same village
+      const villageParcels = await db.getParcelsByVillage(village);
+      // Filter out the current parcel and limit to 5 neighbors
+      const neighbors = villageParcels
+        .filter((p: any) => p.num_parcel !== properties?.Num_parcel)
+        .slice(0, 5);
+      setNeighborParcels(neighbors);
+    } catch (error) {
+      console.error('Failed to load neighbor parcels:', error);
+    }
+  }, [geometry, parcel, properties]);
+  
+  // Load affectataires for collective parcels
+  const loadAffectataires = useCallback(async () => {
+    if (parcel?.parcel_type !== 'collectif' || !properties?.Num_parcel) return;
+    try {
+      // Parse the full collectives dataset
+      const parsedCollectives = collectivesParser.parseCollectives(ParcelsCollectives);
+      // Find the merged affectataires for the current parcel
+      const merged = parsedCollectives.find(
+        (item: any) => String(item.Num_parcel || item.Numero_parcelle || item.Numero || '').trim() === String(properties.Num_parcel || properties.Numero_parcelle || properties.Numero || '').trim()
+      );
+      if (merged) {
+        setAffectatairesMerged(merged);
+        // keep collapsed by default; user can expand via UI
+        setAffectatairesExpanded(false);
+      } else {
+        setAffectatairesMerged(null);
+      }
+    } catch (error) {
+      console.error('Failed to load affectataires:', error);
+      setAffectatairesMerged(null);
+    }
+  }, [parcel, properties]);
+  
+  // Load neighbors and affectataires when component mounts
+  useEffect(() => {
+    if (dbReady) {
+      loadNeighborParcels();
+    }
+    loadAffectataires();
+  }, [dbReady, loadNeighborParcels, loadAffectataires]);
+
+  // Fit to coordinates when map is ready and data changes
+  const fitToCoordinates = useCallback(() => {
+    if (!mapRef.current || !mapReady) return;
+
+    const coordsList: { latitude: number; longitude: number }[] = [];
+
+    if (mainParcelRings.length > 0 && mainParcelRings[0].length > 0) {
+      coordsList.push(...mainParcelRings[0]);
+    }
+
+    if (showNeighbors && neighborPolygons.length > 0) {
+      neighborPolygons.slice(0, 6).forEach((ring: any) => {
+        if (Array.isArray(ring) && ring.length > 0) coordsList.push(...ring);
+      });
+    }
+
+  if (coordsList.length > 0) {
+      try {
+        setTimeout(() => {
+          mapRef.current?.fitToCoordinates(coordsList, {
+            edgePadding: { top: 120, right: 60, bottom: 120, left: 60 },
+            animated: true,
+          });
+        }, 500);
+      } catch (e) {
+        console.log('fitToCoordinates error', e);
+      }
+    }
+  }, [mapReady, mainParcelRings, neighborPolygons, showNeighbors]);
+
+  useEffect(() => {
+    fitToCoordinates();
+  }, [fitToCoordinates]);
+
+  const onMapReady = useCallback(() => {
+    setMapReady(true);
+  }, []);
+
+  const centerOnParcel = useCallback(() => {
+    if (!centroid) return;
+    const region = { latitude: centroid.latitude, longitude: centroid.longitude, latitudeDelta: 0.002, longitudeDelta: 0.002 };
+    try {
+      mapRef.current?.animateToRegion(region, 1000);
+    } catch (e) {
+      console.log('animateToRegion failed', e);
+    }
+  }, [centroid]);
+
+  const openInGoogleMaps = useCallback(() => {
+    if (!centroid) return;
+    const url = Platform.OS === 'ios' ? `http://maps.apple.com/?ll=${centroid.latitude},${centroid.longitude}` : `https://www.google.com/maps/search/?api=1&query=${centroid.latitude},${centroid.longitude}`;
+    Linking.openURL(url);
+  }, [centroid]);
+
+  const renderPersonnePhysique = () => (
+  <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="person" size={24} color="#2196F3" />
+          <Text style={styles.cardTitle}>Informations Personnelles</Text>
+        </View>
+  <View style={styles.divider} />
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Prénom:</Text>
+          <Text style={styles.value}>{properties?.Prenom || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Nom:</Text>
+          <Text style={styles.value}>{properties?.Nom || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Sexe:</Text>
+          <Text style={styles.value}>{properties?.Sexe || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Situation matrimoniale:</Text>
+          <Text style={styles.value}>{properties?.Situa_mat || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Date de naissance:</Text>
+          <Text style={styles.value}>{properties?.Date_naiss ? new Date(properties.Date_naiss).toLocaleDateString('fr-FR') : 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Lieu de naissance:</Text>
+          <Text style={styles.value}>{properties?.Lieu_naiss || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Type de pièce:</Text>
+          <Text style={styles.value}>{properties?.Type_piece || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Numéro de pièce:</Text>
+          <Text style={styles.value}>{properties?.Num_piece || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Téléphone:</Text>
+          <Text style={styles.value}>{properties?.Telephone || 'N/A'}</Text>
+        </View>
+  {/* End of card content */}
+  </View>
+  );
+
+  const renderPersonneMorale = () => (
+  <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="business" size={24} color="#4CAF50" />
+          <Text style={styles.cardTitle}>Informations Entreprise</Text>
+        </View>
+  <View style={styles.divider} />
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Dénomination:</Text>
+          <Text style={styles.value}>{properties?.Denominat || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Mandataire:</Text>
+          <Text style={styles.value}>{properties?.Mandataire || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Téléphone:</Text>
+          <Text style={styles.value}>{properties?.Telephone_001 || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Numéro de pièce:</Text>
+          <Text style={styles.value}>{properties?.Num_piece || 'N/A'}</Text>
+        </View>
+  {/* End of card content */}
+  </View>
+  );
+
+  const renderParcelCollectif = (props: any) => (
+  <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="people" size={24} color="#FF9800" />
+          <Text style={styles.cardTitle}>Parcelle Collective</Text>
+        </View>
+    <View style={styles.dividerLine} />
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Prénom (Mandataire):</Text>
+          <Text style={styles.value}>{props?.Prenom_M || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Nom (Mandataire):</Text>
+          <Text style={styles.value}>{props?.Nom_M || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Âge:</Text>
+          <Text style={styles.value}>{props?.Age || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Sexe:</Text>
+          <Text style={styles.value}>{props?.Sexe_Mndt || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Nombre d'affectataires:</Text>
+          <Text style={styles.value}>{props?.Quel_est_le_nombre_d_affectata || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Numéro de pièce:</Text>
+          <Text style={styles.value}>{props?.Num_piec || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Téléphone:</Text>
+          <Text style={styles.value}>{props?.Telephon2 || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Lieu de résidence:</Text>
+          <Text style={styles.value}>{props?.Lieu_resi2 || 'N/A'}</Text>
+        </View>
+
+        {/* Merged affectataires (collapsed by default) */}
+            {affectatairesMerged && (
+              <View style={{ marginTop: 12 }}>
+                {affectatairesExpanded && <View style={styles.dividerLine} />}
+              </View>
+            )}
+
+                {affectatairesMerged && (
+          <View style={{ marginTop: 12 }}>
+            <View style={styles.dividerLine} />
+            <TouchableOpacity onPress={() => setAffectatairesExpanded((s: boolean) => !s)} style={{ paddingVertical: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, { width: 'auto' }]}>Affectataires</Text>
+                  <Text style={[styles.value, { marginTop: 4 }]} numberOfLines={1}>{(affectatairesMerged.Prenom || '') + ' • ' + (affectatairesMerged.Nom || '')}</Text>
+                </View>
+                <View style={{ paddingHorizontal: 12 }}>
+                  <Ionicons name={affectatairesExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#2196F3" />
+                </View>
+              </View>
+            </TouchableOpacity>
+
+                {affectatairesExpanded && (
+              <View style={{ marginTop: 8 }}>
+                {String(affectatairesMerged.Prenom || '').split('\n').map((p: string, i: number) => {
+                  const prenom = (String(affectatairesMerged.Prenom || '').split('\n')[i] || '').trim();
+                  const nom = (String(affectatairesMerged.Nom || '').split('\n')[i] || '').trim();
+                  const numero = (String(affectatairesMerged.Numero_piece || '').split('\n')[i] || '').trim();
+                  const tel = (String(affectatairesMerged.Telephone || '').split('\n')[i] || '').trim();
+                  const dob = (String(affectatairesMerged.Date_naissance || '').split('\n')[i] || '').trim();
+                  const residence = (String(affectatairesMerged.Residence || '').split('\n')[i] || '').trim();
+                  return (
+                    <React.Fragment key={`aff-${i}`}>
+                      <View style={styles.affRow}>
+                        <Text style={styles.affIndex}>{i + 1}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.affName}>{[prenom, nom].filter(Boolean).join(' ') || 'N/A'}</Text>
+                          <View style={styles.affDetailsRow}>
+                            {numero ? <Text style={styles.affDetailItem}>ID: {numero}</Text> : null}
+                            {tel ? <Text style={styles.affDetailItem}>Tel: {tel}</Text> : null}
+                            {dob ? <Text style={styles.affDetailItem}>Né: {dob}</Text> : null}
+                            {residence ? <Text style={styles.affDetailItem}>Résidence: {residence}</Text> : null}
+                          </View>
+                        </View>
+                      </View>
+                    </React.Fragment>
+                  );
+                })}
+              </View>
+            )}
+
+          </View>
+        )}
+        </View>
+  </View>
+  );
+
+  const renderParcelInfo = () => (
+    <View style={styles.card}>
+      <View>
+        <View style={styles.cardHeader}>
+          <Ionicons name="map" size={24} color="#9C27B0" />
+          <Text style={styles.cardTitle}>Informations Parcelle</Text>
+        </View>
+        <View style={styles.dividerLine} />
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Numéro de parcelle:</Text>
+          <Text style={styles.valueImportant}>{properties?.Num_parcel}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Village:</Text>
+          <Text style={styles.value}>{properties?.Village || properties?.village || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Région:</Text>
+          <Text style={styles.value}>{properties?.regionSenegal || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Département:</Text>
+          <Text style={styles.value}>{properties?.departmentSenegal || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Commune:</Text>
+          <Text style={styles.value}>{properties?.communeSenegal || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Vocation:</Text>
+          <Text style={styles.value}>{properties?.Vocation || properties?.Vocation_1 || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Type d'usage:</Text>
+          <Text style={styles.value}>{properties?.type_usag || properties?.type_usa || 'N/A'}</Text>
+        </View>
+      {/* End of card content */}
+      </View>
+      );
+
+  const renderOccupationInfo = () => (
+    <View style={styles.card}>
+      <View>
+        <View style={styles.cardHeader}>
+          <Ionicons name="compass" size={24} color="#795548" />
+          <Text style={styles.cardTitle}>Limites de la Parcelle</Text>
+        </View>
+        <View style={styles.dividerLine} />
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Nord:</Text>
+          <Text style={styles.value}>{properties?.Occup_nord || properties?.Occup_N || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Sud:</Text>
+          <Text style={styles.value}>{properties?.Occup_sud || properties?.Occup_S || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Est:</Text>
+          <Text style={styles.value}>{properties?.Occup_est || properties?.Occup_E || 'N/A'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Ouest:</Text>
+          <Text style={styles.value}>{properties?.Occup_ouest || properties?.Occup_O || 'N/A'}</Text>
+        </View>
+      {/* End of card content */}
+    </View>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.parcelNumber}>{properties?.Num_parcel}</Text>
+          <View style={[styles.typeChip, { borderColor: parcel?.parcel_type === 'individuel' ? '#2196F3' : '#4CAF50' }]}> 
+            <Text style={{ color: parcel?.parcel_type === 'individuel' ? '#2196F3' : '#4CAF50', fontSize: 12 }}>
+              {parcel?.parcel_type === 'individuel' ? 'Parcelle Individuelle' : 'Parcelle Collective'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Map */}
+      {showMap && (
+        <View style={styles.mapCard}>
+          <View style={styles.mapContainer}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="location" size={24} color="#F44336" />
+              <Text style={styles.cardTitle}>Géométrie de la Parcelle</Text>
+              <TouchableOpacity onPress={centerOnParcel} style={{ padding: 8, marginRight: 8 }}>
+                <Ionicons name="locate" size={20} color="#1976d2" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setShowNeighbors((s: boolean) => !s)} style={{ padding: 8, marginRight: 8 }}>
+                <Ionicons name={showNeighbors ? 'layers' : 'layers-outline'} size={20} color={showNeighbors ? '#388e3c' : '#666'} />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setShowMap(!showMap)} style={styles.toggleButton}>
+                <Ionicons name={showMap ? 'eye-off' : 'eye'} size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={openInGoogleMaps} style={[styles.button, { marginBottom: 8, opacity: centroid ? 1 : 0.5 }]} disabled={!centroid}>
+              <Text style={styles.buttonText}>Naviguer vers le centre de la parcelle</Text>
+            </TouchableOpacity>
+
+            {mainParcelRings.length > 0 && mainParcelRings[0].length > 0 ? (
+              <MapView
+                // @ts-ignore: map ref typing mismatch in this project's lib defs
+                ref={(r) => (mapRef.current = r)}
+                style={[styles.map, { backgroundColor: '#e0e0e0' }]}
+                initialRegion={mapRegion}
+                onMapReady={onMapReady}
+                provider="google"
+                mapType="hybrid"
+                zoomEnabled
+                pitchEnabled
+                rotateEnabled
+                scrollEnabled
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+              >
+                        {mainParcelRings.map((coords: any[], idx: number) => {
+                            if (!coords || coords.length < 3) return null;
+                            return (
+                              <React.Fragment key={`main-${idx}`}>
+                                <Polygon coordinates={coords} fillColor="rgba(33, 150, 243, 0.6)" strokeColor="#0d47a1" strokeWidth={4} zIndex={5} />
+                              </React.Fragment>
+                            );
+                          })}
+
+                {showNeighbors && neighborPolygons.slice(0, 6).map((coords: any[], idx: number) => {
+                  if (!coords || coords.length < 3) return null;
+                  return (
+                    <React.Fragment key={`neighbor-${idx}`}>
+                      <Polygon coordinates={coords} fillColor="rgba(76, 175, 80, 0.4)" strokeColor="#1b5e20" strokeWidth={3} zIndex={3} />
+                    </React.Fragment>
+                  );
+                })}
+              </MapView>
+            ) : (
+              <View style={styles.noGeometryContainer}>
+                <Text style={styles.noGeometryText}>Géométrie non disponible pour cette parcelle.</Text>
+                <Text style={styles.debugText}>Debug: Geometry type: {geometry?.type || 'undefined'}</Text>
+                <Text style={styles.debugText}>Coordinates available: {geometry?.coordinates ? 'Yes' : 'No'}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+
+      {!showMap && (
+        <View style={styles.card}>
+          <View>
+            <TouchableOpacity style={[styles.showMapButton, {borderWidth: 1, borderColor: '#1976d2', borderRadius: 24, paddingVertical: 12, alignItems: 'center', marginVertical: 8}]} onPress={() => setShowMap(true)}>
+              <Text style={{color: '#1976d2', fontWeight: '700', fontSize: 16}}>Afficher la carte</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {renderParcelInfo()}
+
+      {parcel?.parcel_type === 'individuel' ? (properties?.Typ_pers === 'personne_morale' ? renderPersonneMorale() : renderPersonnePhysique()) : renderParcelCollectif(properties)}
+
+      {renderOccupationInfo()}
+
+      {neighborParcels.length > 0 && (
+        <View style={styles.card}>
+          <View>
+            <View style={styles.cardHeader}>
+              <Ionicons name="layers" size={22} color="#388e3c" />
+              <Text style={styles.cardTitle}>Parcelles voisines ({neighborParcels.length})</Text>
+            </View>
+            <View style={styles.dividerLine} />
+            {neighborParcels.map((neighbor: any, idx: number) => (
+              <React.Fragment key={neighbor.id || idx}>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.label, { color: '#388e3c' }]}>{neighbor.num_parcel}</Text>
+                  <Text style={styles.value}>{neighbor.nom || neighbor.nom_m || neighbor.denominat || 'N/A'}</Text>
+                  <Text style={[styles.value, { color: '#888', fontSize: 12 }]}>{neighbor.village || ''}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+      )}
+
+      <TouchableOpacity style={{ margin: 16, backgroundColor: '#4CAF50', borderRadius: 24, paddingVertical: 16, alignItems: 'center' }} onPress={() => navigation.navigate('ComplaintForm', { parcelNumber: properties?.Num_parcel })}>
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18, letterSpacing: 1 }}>Enregistrer une plainte</Text>
+      </TouchableOpacity>
+
+      <View style={styles.bottomSpacing} />
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  header: { backgroundColor: 'white', padding: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84 },
+  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  parcelNumber: { fontSize: 24, fontWeight: 'bold', color: '#333', flex: 1 },
+  typeChip: { marginLeft: 8 },
+  mapCard: { margin: 16, marginBottom: 8, elevation: 3 },
+  mapContainer: { padding: 0 },
+  map: { width: '100%', height: 250, marginTop: 8 },
+  card: { margin: 16, marginBottom: 8, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginLeft: 8, flex: 1 },
+  toggleButton: { padding: 8 },
+  divider: { marginVertical: 12 },
+  dividerLine: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 12 },
+  infoRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-start' },
+  label: { fontSize: 14, fontWeight: '600', color: '#666', width: 140, marginRight: 12 },
+  value: { fontSize: 14, color: '#333', flex: 1, lineHeight: 20 },
+  valueImportant: { fontSize: 16, fontWeight: 'bold', color: '#2196F3', flex: 1 },
+  showMapButton: { marginVertical: 8 },
+  bottomSpacing: { height: 32 },
+  noGeometryContainer: { padding: 16 },
+  noGeometryText: { color: '#f44336', marginTop: 16 },
+  debugText: { color: '#666', marginTop: 8, fontSize: 12 },
+  affRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  affIndex: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#e0e0e0', textAlign: 'center', lineHeight: 24, marginRight: 8 },
+  affName: { fontWeight: '600', color: '#333' },
+  affMeta: { color: '#666', fontSize: 12 },
+  affDetailsRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
+  affDetailItem: { marginRight: 12, color: '#666', fontSize: 12 },
+});
+
+export default ParcelDetailScreen;
