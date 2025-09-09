@@ -1,0 +1,257 @@
+--------- beginning of main
+09-08 22:14:29.858 I/ReactNativeJS(12227): Running "main"
+09-08 22:14:42.435 I/ReactNativeJS(12227): 'ParcelRow theme:', 'object', [ 'colors',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'appColors',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'spacing',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'spacingValues',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'typography',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'metrics',
+09-08 22:14:42.435 I/ReactNativeJS(12227):   'radii' ]
+09-08 22:14:42.442 I/ReactNativeJS(12227): 'DEBUG ParcelRow type:', 'function', [Function: ParcelRowComponent]
+09-08 22:14:42.939 I/ReactNativeJS(12227): 'APP THEME LOADED keys:', [ 'colors',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'appColors',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'spacing',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'spacingValues',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'typography',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'metrics',
+09-08 22:14:42.939 I/ReactNativeJS(12227):   'radii' ]
+09-08 22:14:42.940 I/ReactNativeJS(12227): 'APP THEME appColors present:', true
+09-08 22:14:42.943 I/ReactNativeJS(12227): 'APP THEME appColors keys:', [ 'primary',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'accent',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'secondary',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'background',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'surface',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'muted',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'text',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'subtext',
+09-08 22:14:42.943 I/ReactNativeJS(12227):   'cardShadow' ]
+09-08 22:14:42.964 I/ReactNativeJS(12227): Running "main" with {"rootTag":11,"initialProps":{},"fabric":true}
+09-08 22:14:44.273 I/ReactNativeJS(12227): Initializing app...
+09-08 22:14:45.455 I/ReactNativeJS(12227): Attempting to load prebuilt DB with Asset API...
+09-08 22:15:19.982 I/ReactNativeJS(12227): 'Asset found, copying from:', 'file:///data/user/0/com.cabgn.XamLeydi/cache/ExponentAsset-404db59cfd4edb914136b029ec63e7dc.db'
+09-08 22:15:20.330 I/ReactNativeJS(12227): Database copied successfully via Asset API
+09-08 22:15:20.331 I/ReactNativeJS(12227): Bundled DB size: 80748544 bytes
+09-08 22:15:21.466 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT count(*) as count FROM sqlite_master WHERE type=\'table\' AND name=\'parcels\'', 'with params:', []
+09-08 22:15:21.557 I/ReactNativeJS(12227): 'First query result:', { count: 1 }
+09-08 22:15:21.565 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:15:21.602 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:15:21.603 I/ReactNativeJS(12227): Database already has 13922 records, skipping seeding
+09-08 22:15:21.603 I/ReactNativeJS(12227): Database initialized successfully
+09-08 22:15:22.764 I/ReactNative(12227): [GESTURE HANDLER] Initialize gesture handler for root view com.facebook.react.runtime.ReactSurfaceView{4d954e0 V.E...... .......D 0,0-720,1448 #b}
+09-08 22:15:22.767 I/ReactNative(12227): [GESTURE HANDLER] Gesture handler is already enabled for a parent view
+09-08 22:15:22.827 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:15:22.867 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:15:22.871 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels WHERE parcel_type = \'individuel\'', 'with params:', []
+09-08 22:15:22.917 I/ReactNativeJS(12227): 'First query result:', { count: 12491 }
+09-08 22:15:22.921 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels WHERE parcel_type = \'collectif\'', 'with params:', []
+09-08 22:15:22.969 I/ReactNativeJS(12227): 'First query result:', { count: 1431 }
+09-08 22:15:22.975 I/ReactNativeJS(12227): 'Running SQL query:', 'SELECT DISTINCT village FROM parcels WHERE village IS NOT NULL ORDER BY village', 'with params:', []
+09-08 22:15:23.079 I/ReactNativeJS(12227): Query returned 137 rows
+09-08 22:15:30.532 I/ReactNativeJS(12227): 'Search request: "13" with options:', '{"limit":20,"offset":0}'
+09-08 22:15:30.534 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:15:30.570 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:15:30.571 I/ReactNativeJS(12227): Database contains 13922 parcels total
+09-08 22:15:30.572 I/ReactNativeJS(12227): 'Executing regular search query with pattern:', '%13%'
+09-08 22:15:30.573 I/ReactNativeJS(12227): 'Executing count query with params:', '13'
+09-08 22:15:30.576 I/ReactNativeJS(12227): 'Running SQL first query:', '\n        SELECT COUNT(*) as total FROM parcels WHERE \n        num_parcel = ? OR\n        num_parcel LIKE ? OR \n        nom LIKE ? OR \n        prenom LIKE ? OR \n        prenom_m LIKE ? OR \n        nom_m LIKE ? OR \n        denominat LIKE ? OR \n        village LIKE ? OR\n        properties LIKE ?\n      ', 'with params:', [ '13',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.576 I/ReactNativeJS(12227):   '%13%' ]
+09-08 22:15:30.796 I/ReactNativeJS(12227): 'First query result:', { total: 12191 }
+09-08 22:15:30.797 I/ReactNativeJS(12227): Count query found 12191 total matches
+09-08 22:15:30.799 I/ReactNativeJS(12227): 'Executing select query with params:', '13', '%13%', 20, 0
+09-08 22:15:30.801 I/ReactNativeJS(12227): 'Running SQL query:', '\n        SELECT * FROM parcels WHERE \n        num_parcel = ? OR\n        num_parcel LIKE ? OR \n        nom LIKE ? OR \n        prenom LIKE ? OR \n        prenom_m LIKE ? OR \n        nom_m LIKE ? OR \n        denominat LIKE ? OR\n        village LIKE ? OR\n        properties LIKE ? \n        ORDER BY \n          CASE WHEN num_parcel = ? THEN 0 ELSE 1 END,\n          id \n        LIMIT ? OFFSET ?\n      ', 'with params:', [ '13',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '%13%',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   '13',
+09-08 22:15:30.801 I/ReactNativeJS(12227):   20,
+09-08 22:15:30.801 I/ReactNativeJS(12227):   0 ]
+09-08 22:15:31.083 I/ReactNativeJS(12227): Query returned 20 rows
+09-08 22:15:31.084 I/ReactNativeJS(12227): Query returned 20 results
+09-08 22:15:31.085 I/ReactNativeJS(12227): 'First result:', '{"id":9,"num_parcel":"0522030202966","parcel_type":"individuel","nom":"SY","prenom":"MOUSSA","nom_m":"","prenom_m":""}'
+09-08 22:15:31.725 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 9
+09-08 22:15:31.745 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 11
+09-08 22:15:31.762 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 13
+09-08 22:15:31.779 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 16
+09-08 22:15:31.797 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 17
+09-08 22:15:31.816 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 18
+09-08 22:15:31.836 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 20
+09-08 22:15:31.854 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 21
+09-08 22:15:31.873 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 24
+09-08 22:15:31.902 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 30
+09-08 22:15:32.323 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 39
+09-08 22:15:32.344 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 40
+09-08 22:15:32.363 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 42
+09-08 22:15:32.383 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 48
+09-08 22:15:32.403 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 50
+09-08 22:15:32.637 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 53
+09-08 22:15:32.673 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 54
+09-08 22:15:32.696 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 56
+09-08 22:15:32.719 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 60
+09-08 22:15:32.741 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 66
+09-08 22:17:27.096 I/ReactNative(12227): [GESTURE HANDLER] Tearing down gesture handler registered for root view com.facebook.react.runtime.ReactSurfaceView{4d954e0 V.E...... ........ 0,0-720,1448 #b}
+09-08 22:18:12.692 I/ReactNativeJS(12227): 'ParcelRow theme:', 'object', [ 'colors',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'appColors',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'spacing',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'spacingValues',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'typography',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'metrics',
+09-08 22:18:12.692 I/ReactNativeJS(12227):   'radii' ]
+09-08 22:18:12.697 I/ReactNativeJS(12227): 'DEBUG ParcelRow type:', 'function', [Function: ParcelRowComponent]
+09-08 22:18:14.524 I/ReactNativeJS(12227): 'APP THEME LOADED keys:', [ 'colors',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'appColors',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'spacing',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'spacingValues',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'typography',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'metrics',
+09-08 22:18:14.524 I/ReactNativeJS(12227):   'radii' ]
+09-08 22:18:14.526 I/ReactNativeJS(12227): 'APP THEME appColors present:', true
+09-08 22:18:14.528 I/ReactNativeJS(12227): 'APP THEME appColors keys:', [ 'primary',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'accent',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'secondary',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'background',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'surface',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'muted',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'text',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'subtext',
+09-08 22:18:14.528 I/ReactNativeJS(12227):   'cardShadow' ]
+09-08 22:18:14.558 I/ReactNativeJS(12227): Running "main" with {"rootTag":51,"initialProps":{},"fabric":true}
+09-08 22:18:15.504 I/ReactNativeJS(12227): Initializing app...
+09-08 22:18:16.095 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT count(*) as count FROM sqlite_master WHERE type=\'table\' AND name=\'parcels\'', 'with params:', []
+09-08 22:18:16.121 I/ReactNativeJS(12227): 'First query result:', { count: 1 }
+09-08 22:18:16.125 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:18:16.891 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:18:16.892 I/ReactNativeJS(12227): Database already has 13922 records, skipping seeding
+09-08 22:18:16.893 I/ReactNativeJS(12227): Database initialized successfully
+09-08 22:18:17.664 I/ReactNative(12227): [GESTURE HANDLER] Initialize gesture handler for root view com.facebook.react.runtime.ReactSurfaceView{337b339 V.E...... .......D 0,0-720,1448 #33}
+09-08 22:18:17.665 I/ReactNative(12227): [GESTURE HANDLER] Gesture handler is already enabled for a parent view
+09-08 22:18:17.757 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:18:17.797 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:18:17.801 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels WHERE parcel_type = \'individuel\'', 'with params:', []
+09-08 22:18:17.844 I/ReactNativeJS(12227): 'First query result:', { count: 12491 }
+09-08 22:18:17.848 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels WHERE parcel_type = \'collectif\'', 'with params:', []
+09-08 22:18:17.890 I/ReactNativeJS(12227): 'First query result:', { count: 1431 }
+09-08 22:18:17.896 I/ReactNativeJS(12227): 'Running SQL query:', 'SELECT DISTINCT village FROM parcels WHERE village IS NOT NULL ORDER BY village', 'with params:', []
+09-08 22:18:17.996 I/ReactNativeJS(12227): Query returned 137 rows
+09-08 22:18:21.999 I/ReactNativeJS(12227): 'Search request: "13" with options:', '{"limit":20,"offset":0}'
+09-08 22:18:22.000 I/ReactNativeJS(12227): 'Running SQL first query:', 'SELECT COUNT(*) as count FROM parcels', 'with params:', []
+09-08 22:18:22.035 I/ReactNativeJS(12227): 'First query result:', { count: 13922 }
+09-08 22:18:22.036 I/ReactNativeJS(12227): Database contains 13922 parcels total
+09-08 22:18:22.038 I/ReactNativeJS(12227): 'Executing regular search query with pattern:', '%13%'
+09-08 22:18:22.039 I/ReactNativeJS(12227): 'Executing count query with params:', '13'
+09-08 22:18:22.043 I/ReactNativeJS(12227): 'Running SQL first query:', '\n        SELECT COUNT(*) as total FROM parcels WHERE \n        num_parcel = ? OR\n        num_parcel LIKE ? OR \n        nom LIKE ? OR \n        prenom LIKE ? OR \n        prenom_m LIKE ? OR \n        nom_m LIKE ? OR \n        denominat LIKE ? OR \n        village LIKE ? OR\n        properties LIKE ?\n      ', 'with params:', [ '13',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.043 I/ReactNativeJS(12227):   '%13%' ]
+09-08 22:18:22.383 I/ReactNativeJS(12227): 'First query result:', { total: 12191 }
+09-08 22:18:22.385 I/ReactNativeJS(12227): Count query found 12191 total matches
+09-08 22:18:22.387 I/ReactNativeJS(12227): 'Executing select query with params:', '13', '%13%', 20, 0
+09-08 22:18:22.391 I/ReactNativeJS(12227): 'Running SQL query:', '\n        SELECT * FROM parcels WHERE \n        num_parcel = ? OR\n        num_parcel LIKE ? OR \n        nom LIKE ? OR \n        prenom LIKE ? OR \n        prenom_m LIKE ? OR \n        nom_m LIKE ? OR \n        denominat LIKE ? OR\n        village LIKE ? OR\n        properties LIKE ? \n        ORDER BY \n          CASE WHEN num_parcel = ? THEN 0 ELSE 1 END,\n          id \n        LIMIT ? OFFSET ?\n      ', 'with params:', [ '13',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '%13%',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   '13',
+09-08 22:18:22.391 I/ReactNativeJS(12227):   20,
+09-08 22:18:22.391 I/ReactNativeJS(12227):   0 ]
+09-08 22:18:22.671 I/ReactNativeJS(12227): Query returned 20 rows
+09-08 22:18:22.673 I/ReactNativeJS(12227): Query returned 20 results
+09-08 22:18:22.674 I/ReactNativeJS(12227): 'First result:', '{"id":9,"num_parcel":"0522030202966","parcel_type":"individuel","nom":"SY","prenom":"MOUSSA","nom_m":"","prenom_m":""}'
+09-08 22:18:23.368 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 9
+09-08 22:18:23.393 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 11
+09-08 22:18:23.427 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 13
+09-08 22:18:23.450 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 16
+09-08 22:18:23.472 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 17
+09-08 22:18:23.493 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 18
+09-08 22:18:23.515 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 20
+09-08 22:18:23.536 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 21
+09-08 22:18:23.557 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 24
+09-08 22:18:23.579 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 30
+09-08 22:18:23.830 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 39
+09-08 22:18:23.848 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 40
+09-08 22:18:23.868 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 42
+09-08 22:18:23.888 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 48
+09-08 22:18:23.908 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 50
+09-08 22:18:24.227 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 53
+09-08 22:18:24.247 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 54
+09-08 22:18:24.267 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 56
+09-08 22:18:24.286 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 60
+09-08 22:18:24.305 I/ReactNativeJS(12227): 'renderSearchResult item id/type:', 66
+09-08 22:18:25.970 E/ReactNativeJS(12227): 'Error: Requiring unknown module "1467". If you are sure the module exists, try restarting Metro. You may also want to run `yarn` or `npm install`., js engine: hermes', { [Component Stack] name: 'Component Stack' }
+09-08 22:18:25.976 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030203682',
+09-08 22:18:25.976 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:18:25.976 I/ReactNativeJS(12227):   propsKeys: 513,
+09-08 22:18:25.976 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:18:25.976 I/ReactNativeJS(12227):   normalizedPresent: false,
+09-08 22:18:25.976 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:18:25.976 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:18:26.188 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030203682',
+09-08 22:18:26.188 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:18:26.188 I/ReactNativeJS(12227):   propsKeys: 507,
+09-08 22:18:26.188 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:18:26.188 I/ReactNativeJS(12227):   normalizedPresent: false,
+09-08 22:18:26.188 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:18:26.188 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:18:26.387 I/ReactNativeJS(12227): 'ParcelDetail: normalizedProps summary', { mandataire: 
+09-08 22:18:26.387 I/ReactNativeJS(12227):    { prenom: 'SAIBA',
+09-08 22:18:26.387 I/ReactNativeJS(12227):      nom: 'DIAOUNE',
+09-08 22:18:26.387 I/ReactNativeJS(12227):      lieu: 'HAMDALAYE TESSAN',
+09-08 22:18:26.387 I/ReactNativeJS(12227):      telephone: '787050667' },
+09-08 22:18:26.387 I/ReactNativeJS(12227):   affectatairesCount: 0 }
+09-08 22:18:26.589 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030203682',
+09-08 22:18:26.589 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:18:26.589 I/ReactNativeJS(12227):   propsKeys: 507,
+09-08 22:18:26.589 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:18:26.589 I/ReactNativeJS(12227):   normalizedPresent: true,
+09-08 22:18:26.589 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:18:26.589 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:18:26.597 E/ReactNativeJS(12227): Error: Requiring unknown module "1467". If you are sure the module exists, try restarting Metro. You may also want to run `yarn` or `npm install`., js engine: hermes
+09-08 22:23:53.613 E/ReactNativeJS(12227): 'Error: Requiring unknown module "1467". If you are sure the module exists, try restarting Metro. You may also want to run `yarn` or `npm install`., js engine: hermes', { [Component Stack] name: 'Component Stack' }
+09-08 22:23:53.619 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030202961',
+09-08 22:23:53.619 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:23:53.619 I/ReactNativeJS(12227):   propsKeys: 513,
+09-08 22:23:53.619 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:23:53.619 I/ReactNativeJS(12227):   normalizedPresent: false,
+09-08 22:23:53.619 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:23:53.619 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:23:53.798 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030202961',
+09-08 22:23:53.798 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:23:53.798 I/ReactNativeJS(12227):   propsKeys: 507,
+09-08 22:23:53.798 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:23:53.798 I/ReactNativeJS(12227):   normalizedPresent: false,
+09-08 22:23:53.798 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:23:53.798 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:23:54.395 I/ReactNativeJS(12227): 'ParcelDetail: normalizedProps summary', { mandataire: 
+09-08 22:23:54.395 I/ReactNativeJS(12227):    { prenom: 'DAHABA',
+09-08 22:23:54.395 I/ReactNativeJS(12227):      nom: 'SAKHO',
+09-08 22:23:54.395 I/ReactNativeJS(12227):      lieu: 'HAMDALLAYE TESSAN',
+09-08 22:23:54.395 I/ReactNativeJS(12227):      telephone: '781147388' },
+09-08 22:23:54.395 I/ReactNativeJS(12227):   affectatairesCount: 0 }
+09-08 22:23:54.597 I/ReactNativeJS(12227): 'ParcelDetail TRACE', { parcelNum: '0522030202961',
+09-08 22:23:54.597 I/ReactNativeJS(12227):   dbReady: true,
+09-08 22:23:54.597 I/ReactNativeJS(12227):   propsKeys: 507,
+09-08 22:23:54.597 I/ReactNativeJS(12227):   hasGeometry: true,
+09-08 22:23:54.597 I/ReactNativeJS(12227):   normalizedPresent: true,
+09-08 22:23:54.597 I/ReactNativeJS(12227):   affectatairesMergedPresent: false,
+09-08 22:23:54.597 I/ReactNativeJS(12227):   neighborCount: 0 }
+09-08 22:23:54.693 E/ReactNativeJS(12227): Error: Requiring unknown module "1467". If you are sure the module exists, try restarting Metro. You may also want to run `yarn` or `npm install`., js engine: hermes

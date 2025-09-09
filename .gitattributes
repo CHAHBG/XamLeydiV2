@@ -1,0 +1,13 @@
+prebuilt/parcelapp.db filter=lfs diff=lfs merge=lfs -text
+android/app/src/main/assets/parcelapp.db filter=lfs diff=lfs merge=lfs -text
+src/data/Parcels_individuels.json filter=lfs diff=lfs merge=lfs -text
+prebuilt/seed_parcels.sql filter=lfs diff=lfs merge=lfs -text
+crash_log.txt filter=lfs diff=lfs merge=lfs -text
+*.map filter=lfs diff=lfs merge=lfs -text
+*.bundle filter=lfs diff=lfs merge=lfs -text
+android-bundle/** filter=lfs diff=lfs merge=lfs -text
+bundle.android.js filter=lfs diff=lfs merge=lfs -text
+*.db filter=lfs diff=lfs merge=lfs -text
+*.apk filter=lfs diff=lfs merge=lfs -text
+*.bak filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
