@@ -40,12 +40,17 @@ describe('Database neighbor fallback', () => {
     const origDb = (DatabaseManager as any).db;
     (DatabaseManager as any).db = fakeDb;
 
-    try {
-      const neighbors = await (DatabaseManager as any).getNeighborParcels('TEST');
-      expect(Array.isArray(neighbors)).toBe(true);
-      expect(neighbors.length).toBeGreaterThan(0);
-      expect(neighbors[0].num_parcel).toBeDefined();
-    } finally {
+      try {
+        const neighbors = await (DatabaseManager as any).getNeighborParcels('TEST');
+        expect(Array.isArray(neighbors)).toBe(true);
+        // New behavior: when we cannot compute reliable distances for the
+        // target parcel, the function returns fallback candidate rows with
+        // null distance metadata so the UI can still show nearby parcels.
+        expect(neighbors.length).toBe(2);
+        // ensure fallback rows have distance metadata set to null/false
+        expect(neighbors[0].__neighbor_distance_m).toBeNull();
+        expect(neighbors[0].__neighbor_within_1km).toBe(false);
+      } finally {
       // restore original db
       (DatabaseManager as any).db = origDb;
     }

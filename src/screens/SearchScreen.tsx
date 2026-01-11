@@ -678,6 +678,14 @@ const SearchScreen = ({ navigation }: any) => {
               </View>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); navigation.navigate('ComplaintEdit'); }}>
+              <SafeIonicons name="pencil" size={18} color={theme.colors.primary} style={styles.menuIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuTitle}>Modifier une plainte</Text>
+                <Text style={styles.menuSubtitle}>Ouvrir et éditer les plaintes locales</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
             <TouchableOpacity style={styles.menuItem} onPress={navigateToComplaintExport}>
               <SafeIonicons name="share-social-outline" size={18} color={theme.colors.accent} style={styles.menuIcon} />
               <View style={{ flex: 1 }}>

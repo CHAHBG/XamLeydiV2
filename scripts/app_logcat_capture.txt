@@ -1,0 +1,87 @@
+﻿--------- beginning of main
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): Error inserting pk=acnt val={"id":"rM4vju2uTqymCOytLC2NxWztrQ==\n","hash":[-121,17],"saVer":"15.4.01.2","userNameFrom":-1}
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): android.database.sqlite.SQLiteConstraintException: UNIQUE constraint failed: info.pk (code 1555 SQLITE_CONSTRAINT_PRIMARYKEY[1555])
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteConnection.nativeExecuteForLastInsertedRowId(Native Method)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteConnection.executeForLastInsertedRowId(SQLiteConnection.java:1232)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteSession.executeForLastInsertedRowId(SQLiteSession.java:790)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteStatement.executeInsert(SQLiteStatement.java:89)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteDatabase.insertWithOnConflict(SQLiteDatabase.java:2244)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.database.sqlite.SQLiteDatabase.insert(SQLiteDatabase.java:2113)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at com.samsung.android.intelligentcontinuity.database.DatabaseProvider.insert(DatabaseProvider.java:6)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.content.ContentProvider.insert(ContentProvider.java:1813)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.content.ContentProvider$Transport.insert(ContentProvider.java:344)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.content.ContentResolver.insert(ContentResolver.java:2200)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at android.content.ContentResolver.insert(ContentResolver.java:2162)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at com.samsung.android.intelligentcontinuity.database.a.b(DatabaseManager.java:83)
+09-25 12:23:29.536 E/SQLiteDatabase( 2132): 	at com.samsung.android.intelligentcontinuity.h.f$a.run(SamsungAccountManager.java:40)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): Failed to open database '/data/user/0/com.facebook.appmanager/databases/androidx.work.workdb'.
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): android.database.sqlite.SQLiteCantOpenDatabaseException: Cannot open database '/data/user/0/com.facebook.appmanager/databases/androidx.work.workdb': File /data/user/0/com.facebook.appmanager/databases/androidx.work.workdb doesn't exist
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:371)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:226)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnectionPool.openConnectionLocked(SQLiteConnectionPool.java:736)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:284)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:251)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java:1415)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java:1356)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:1024)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:962)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at com.facebook.oxygen.common.androidx.workmanager.initializer.b.a(WorkManagerDatabase.java:22)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at com.facebook.oxygen.appmanager.app.c.a(AppManagerApplicationImpl.java:21)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at com.facebook.oxygen.common.component.b.d.onCreate(OxpDelegatingApplication.java:84)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1211)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:7506)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.app.ActivityThread.access$1600(ActivityThread.java:310)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2281)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.os.Handler.dispatchMessage(Handler.java:106)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.os.Looper.loopOnce(Looper.java:226)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.os.Looper.loop(Looper.java:313)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.app.ActivityThread.main(ActivityThread.java:8669)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at java.lang.reflect.Method.invoke(Native Method)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:571)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1135)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): Caused by: android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (code 1806 SQLITE_CANTOPEN_ENOENT[1806]): Could not open database
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnection.nativeOpen(Native Method)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:341)
+09-25 12:26:37.792 E/SQLiteDatabase( 2251): 	... 22 more
+09-25 12:26:38.142 E/libc    ( 1455): Access denied finding property "ro.hardware.alter"
+09-25 12:26:38.142 E/libc    ( 1455): Access denied finding property "ro.mediatek.platform"
+09-25 12:41:37.461 E/libc    ( 3268): Access denied finding property "ro.mediatek.platform"
+09-25 12:41:37.462 E/libc    ( 3268): Access denied finding property "ro.chipname"
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): Failed to open database '/data/user/0/com.facebook.appmanager/databases/androidx.work.workdb'.
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): android.database.sqlite.SQLiteCantOpenDatabaseException: Cannot open database '/data/user/0/com.facebook.appmanager/databases/androidx.work.workdb': File /data/user/0/com.facebook.appmanager/databases/androidx.work.workdb doesn't exist
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:371)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:226)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnectionPool.openConnectionLocked(SQLiteConnectionPool.java:736)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:284)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:251)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java:1415)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java:1356)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:1024)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:962)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at com.facebook.oxygen.common.androidx.workmanager.initializer.b.a(WorkManagerDatabase.java:22)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at com.facebook.oxygen.appmanager.app.c.a(AppManagerApplicationImpl.java:21)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at com.facebook.oxygen.common.component.b.d.onCreate(OxpDelegatingApplication.java:84)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1211)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:7506)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.app.ActivityThread.access$1600(ActivityThread.java:310)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2281)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.os.Handler.dispatchMessage(Handler.java:106)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.os.Looper.loopOnce(Looper.java:226)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.os.Looper.loop(Looper.java:313)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.app.ActivityThread.main(ActivityThread.java:8669)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at java.lang.reflect.Method.invoke(Native Method)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:571)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1135)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): Caused by: android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (code 1806 SQLITE_CANTOPEN_ENOENT[1806]): Could not open database
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnection.nativeOpen(Native Method)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:341)
+09-25 12:45:39.198 E/SQLiteDatabase( 3751): 	... 22 more
+09-25 13:10:05.085 E/libc    ( 6065): Access denied finding property "qemu.hw.mainkeys"
+09-25 13:13:19.241 E/libc    ( 6065): Access denied finding property "ro.oem_unlock_supported"
+09-25 13:20:10.044 E/libc    ( 6065): Access denied finding property "ro.oem_unlock_supported"
+09-25 13:31:17.387 E/libc    ( 8586): Access denied finding property "persist.adb.tls_server.enable"
+09-25 13:31:25.330 E/libc    ( 9090): Access denied finding property "ro.mediatek.platform"
+09-25 13:44:41.056 E/libc    (10825): Access denied finding property "ro.mediatek.platform"
+09-25 13:44:41.057 E/libc    (10825): Access denied finding property "ro.chipname"
+09-25 13:54:46.848 E/libc    (14964): Access denied finding property "qemu.hw.mainkeys"
+09-25 13:58:01.075 E/libc    (14964): Access denied finding property "ro.oem_unlock_supported"

@@ -1,6 +1,6 @@
 import 'react-native-get-random-values';
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
-import { View, Text, StyleSheet, StatusBar, LogBox, Platform } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, StatusBar, LogBox } from 'react-native';
 
 // Disable excessive logging for better performance
 LogBox.ignoreLogs([
@@ -18,35 +18,31 @@ try {
   console.warn('react-native-screens: forcing JS implementation', e);
 }
 
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+} from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-// Removed PaperProvider and ActivityIndicator from react-native-paper
-import theme from './src/theme';
-// debug: log theme shape at module load
-try {
-  // eslint-disable-next-line no-console
-  console.log('APP THEME LOADED keys:', Object.keys(theme || {}));
-  // eslint-disable-next-line no-console
-  console.log('APP THEME appColors present:', !!(theme && (theme as any).appColors));
-  // eslint-disable-next-line no-console
-  console.log('APP THEME appColors keys:', theme && (theme as any).appColors ? Object.keys((theme as any).appColors) : null);
-} catch (e) {
-  // eslint-disable-next-line no-console
-  console.warn('Error logging theme debug', e);
-}
+import { ThemeProvider, useAppTheme, useThemeMode } from './src/ui/ThemeProvider';
+import { DesignThemeProvider, useDesignTheme } from './src/ui/ThemeContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Import gesture handler safely with fallback
 import * as GH from 'react-native-gesture-handler';
 const GestureHandlerRootView = (GH as any).GestureHandlerRootView || View;
 import DatabaseLoading from './src/components/DatabaseLoading';
 
-import SearchScreen from './src/screens/SearchScreen';
-import ParcelDetailScreen from './src/screens/ParcelDetailScreen';
+// V2 Screens with new design
+import BottomTabNavigator from './src/ui/BottomTabNavigator';
+import { ComplaintWizardScreen, ParcelDetailScreen, ComplaintEditScreen as ComplaintEditScreenV2, AproposScreen as AproposScreenV2 } from './src/screens/v2';
+
+// Legacy screens (still needed for detail views)
+import ModernSearchScreen from './src/screens/ModernSearchScreen';
+import LegacyParcelDetailScreen from './src/screens/ParcelDetailScreen';
 import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
 import ComplaintExportScreen from './src/screens/ComplaintExportScreen';
-import AproposScreen from './src/screens/AproposScreen';
-import DebugScreen from './src/screens/DebugScreen';
+import ComplaintEditScreenLegacy from './src/screens/ComplaintEditScreen';
+// DebugScreen removed in production builds
 import DatabaseManager from './src/data/database';
+import { REACT_APP_SUPABASE_URL, REACT_APP_SUPABASE_ANON_KEY } from '@env';
 import { Asset } from 'expo-asset';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,26 +63,33 @@ class ErrorBoundary extends React.Component<any, { hasError: boolean }> {
   }
   render() {
     if (this.state.hasError) {
-      // Fallback UI: render a basic screen so app remains usable
-      return <SearchScreen />;
+      // Fallback UI keeps app responsive while avoiding recursive failures
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Une erreur inattendue est survenue.</Text>
+        </View>
+      );
     }
     return this.props.children;
   }
 }
 
 type RootStackParamList = {
+  Main: undefined;
   Search: undefined;
   ParcelDetail: { parcel: any }; // Replace 'any' with your actual parcel type if available
   ComplaintForm: { parcelNumber?: string } | undefined;
+  ComplaintWizard: { parcel?: any } | undefined;
+  ComplaintDetail: { complaint: any } | undefined;
   ComplaintExport: undefined;
+  ComplaintEdit: { complaint: any } | undefined;
   Apropos: undefined;
+  Settings: undefined;
+  QRScanner: undefined;
   Debug: undefined;
 };
 
 const Stack = createStackNavigator();
-
-// theme imported from src/theme
-
 // Add a small utility that helps debug "type is invalid" errors by checking 
 // component types before rendering
 const debugComponent = (name: string, Component: any): any => {
@@ -115,21 +118,40 @@ if (__DEV__) {
   LogBox.ignoreLogs(['useInsertionEffect must not schedule updates']);
 }
 
-const LoadingScreen = () => (
-  <View style={styles.loadingContainer}>
-    <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 4, borderColor: theme.appColors.secondary, borderTopColor: 'transparent', alignSelf: 'center', marginBottom: 16 }} />
-    <Text style={styles.loadingText}>Initialisation de la base de données...</Text>
-  </View>
-);
-
-export default function App() {
+function AppContent() {
   const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState(null as string | null);
-  const [dbSeeding, setDbSeeding] = useState(false);
+  const [_dbSeeding, setDbSeeding] = useState(false);
+  const theme = useAppTheme();
+  const { isDark } = useThemeMode();
+  const navigationTheme = useMemo(() => {
+    return {
+      dark: isDark,
+      colors: {
+        background: theme.colors.background,
+        card: theme.colors.surface,
+        text: theme.colors.text,
+        border: theme.colors.border,
+        primary: theme.colors.primary,
+        notification: theme.colors.primary,
+      },
+    };
+  }, [isDark, theme]);
 
   useEffect(() => {
-  console.log('Initializing app...');
+    console.log('Initializing app...');
     initializeApp();
+  }, []);
+
+  // Configure Supabase client for remote submission if environment vars are present
+  useEffect(() => {
+    try {
+      const url = REACT_APP_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || (global as any).REACT_APP_SUPABASE_URL || null;
+      const key = REACT_APP_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || (global as any).REACT_APP_SUPABASE_ANON_KEY || null;
+      DatabaseManager.setSupabaseConfig(url, key);
+    } catch (e) {
+      console.warn('Failed to set Supabase config from env', e);
+    }
   }, []);
 
   const initializeApp = async () => {
@@ -182,10 +204,9 @@ export default function App() {
       // If seeding already finished, clear immediately
       if (!DatabaseManager.seedingProgress) setDbSeeding(false);
     } catch (error) {
-  console.error('Failed to initialize database:', error);
       console.error('Failed to initialize database:', error);
-      setError('Erreur lors de l\'initialisation de la base de données');
-  setDbReady(true);
+      setError("Erreur lors de l'initialisation de la base de données");
+      setDbReady(true);
     }
   };
 
@@ -193,6 +214,10 @@ export default function App() {
     return (
       <DebugPaperProvider>
         <DebugSafeAreaProvider>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={theme.colors.background}
+          />
           <DebugDatabaseLoading onContinue={() => { setDbReady(true); setDbSeeding(false); }} />
         </DebugSafeAreaProvider>
       </DebugPaperProvider>
@@ -203,9 +228,12 @@ export default function App() {
     return (
       <DebugPaperProvider>
         <DebugSafeAreaProvider>
-          <StatusBar barStyle="dark-content" backgroundColor={theme.appColors.surface} />
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={theme.colors.surface}
+          />
+          <View style={[styles.errorContainer, { backgroundColor: theme.colors.background }]}>
+            <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
           </View>
         </DebugSafeAreaProvider>
       </DebugPaperProvider>
@@ -213,91 +241,101 @@ export default function App() {
   }
 
   return (
-  <DebugPaperProvider>
+    <DebugPaperProvider>
       <DebugSafeAreaProvider>
-        <DebugGestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar barStyle="light-content" backgroundColor={theme.appColors.primary} />
-          <DebugNavigationContainer>
-            <Stack.Navigator
-            initialRouteName="Search"
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: theme.appColors.primary,
-                elevation: 4,
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                shadowColor: '#000',
-                shadowOffset: {
-                  height: 2,
-                  width: 0,
-                },
-              },
-              headerTintColor: '#ffffff',
-              headerTitleStyle: {
-                fontWeight: 'bold',
-                fontSize: 18,
-              },
-            }}
-          >
-            <Stack.Screen
-              name="Search"
-              component={debugComponent('SearchScreen', SearchScreen)}
-              options={{
-                title: 'Recherche de Parcelles',
-              }}
-            />
-            <Stack.Screen
-              name="ParcelDetail"
-              // @ts-ignore - route params are dynamic in this project
-              children={props => React.createElement(debugComponent('ParcelDetailScreen', ParcelDetailScreen as React.ComponentType<any>), { ...props, dbReady })}
-              options={({ route }: { route: any }) => ({
-                title: `Parcelle ${route.params?.parcel?.num_parcel || ''}`,
-                headerStyle: {
-                  backgroundColor: theme.appColors.secondary,
-                },
-              })}
-            />
-            <Stack.Screen
-              name="ComplaintForm"
-              component={debugComponent('ComplaintFormScreen', ComplaintFormScreen)}
-              options={{ title: 'Enregistrement d\'une plainte' }}
-            />
-            <Stack.Screen
-              name="ComplaintExport"
-              component={debugComponent('ComplaintExportScreen', ComplaintExportScreen)}
-              options={{ title: 'Exporter les plaintes' }}
-            />
-            <Stack.Screen
-              name="Debug"
-              component={debugComponent('DebugScreen', DebugScreen)}
-              options={{ title: 'Debug DB' }}
-            />
-            <Stack.Screen
-              name="Apropos"
-              component={debugComponent('AproposScreen', AproposScreen)}
-              options={{ title: 'A propos' }}
-            />
-          </Stack.Navigator>
-          </DebugNavigationContainer>
-        </DebugGestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor="transparent"
+            translucent
+          />
+          <DesignThemeProvider>
+            <DebugNavigationContainer theme={navigationTheme}>
+              <Stack.Navigator
+                initialRouteName="Main"
+                screenOptions={{
+                  headerStyle: {
+                    backgroundColor: theme.colors.primary,
+                    elevation: 0,
+                    shadowOpacity: 0,
+                  },
+                  headerTintColor: '#FFFFFF',
+                  headerTitleStyle: {
+                    fontWeight: '600',
+                    fontSize: 18,
+                    color: '#FFFFFF',
+                  },
+                  contentStyle: {
+                    backgroundColor: theme.colors.background,
+                  },
+                }}
+              >
+                {/* Main Tab Navigator (v2 Design) */}
+                <Stack.Screen
+                  name="Main"
+                  component={BottomTabNavigator}
+                  options={{ headerShown: false }}
+                />
+                {/* Legacy Search Screen (accessible from Map tab) */}
+                <Stack.Screen
+                  name="Search"
+                  component={debugComponent('ModernSearchScreen', ModernSearchScreen)}
+                  options={{
+                    title: 'Recherche de Parcelles',
+                  }}
+                />
+                <Stack.Screen
+                  name="ParcelDetail"
+                  component={debugComponent('ParcelDetailScreen', ParcelDetailScreen)}
+                  options={{ headerShown: false }}
+                />
+                {/* New Complaint Wizard (v2 Design) */}
+                <Stack.Screen
+                  name="ComplaintWizard"
+                  component={debugComponent('ComplaintWizardScreen', ComplaintWizardScreen)}
+                  options={{ headerShown: false }}
+                />
+                {/* Legacy complaint screens */}
+                <Stack.Screen
+                  name="ComplaintForm"
+                  component={debugComponent('ComplaintFormScreen', ComplaintFormScreen)}
+                  options={{ title: 'Enregistrement d\'une plainte' }}
+                />
+                <Stack.Screen
+                  name="ComplaintEdit"
+                  component={debugComponent('ComplaintEditScreenV2', ComplaintEditScreenV2)}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="ComplaintExport"
+                  component={debugComponent('ComplaintExportScreen', ComplaintExportScreen)}
+                  options={{ title: 'Exporter les plaintes' }}
+                />
+                <Stack.Screen
+                  name="Apropos"
+                  component={debugComponent('AproposScreenV2', AproposScreenV2)}
+                  options={{ headerShown: false }}
+                />
+              </Stack.Navigator>
+            </DebugNavigationContainer>
+          </DesignThemeProvider>
+        </GestureHandlerRootView>
       </DebugSafeAreaProvider>
     </DebugPaperProvider>
   );
 }
 
+export default function App() {
+  return (
+    <ThemeProvider>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+    </ThemeProvider>
+  );
+}
+
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -62,10 +62,12 @@ export interface Complaint {
   date?: string; // ISO yyyy-mm-dd
   activity?: string;
   commune?: string;
+  village?: string;
   complainantName?: string;
   complainantSex?: string;
   complainantId?: string;
   complainantContact?: string;
+  complaintFunction?: string;
   complaintReason?: string;
   complaintReceptionMode?: string;
   complaintCategory?: string;

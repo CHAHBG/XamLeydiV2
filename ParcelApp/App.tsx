@@ -45,11 +45,12 @@ import ParcelDetailScreen from './src/screens/ParcelDetailScreen';
 import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
 import ComplaintExportScreen from './src/screens/ComplaintExportScreen';
 import AproposScreen from './src/screens/AproposScreen';
-import DebugScreen from './src/screens/DebugScreen';
+// DebugScreen removed in production builds
 import DatabaseManager from './src/data/database';
 import { Asset } from 'expo-asset';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
+import { REACT_APP_SUPABASE_URL, REACT_APP_SUPABASE_ANON_KEY } from '@env';
 
 // Minimal error boundary to catch native rendering errors (like native module mismatches)
 class ErrorBoundary extends React.Component<any, { hasError: boolean }> {
@@ -130,6 +131,17 @@ export default function App() {
   useEffect(() => {
   console.log('Initializing app...');
     initializeApp();
+  }, []);
+
+  // Configure Supabase client for remote submission if .env vars are present
+  useEffect(() => {
+    try {
+      const url = REACT_APP_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || (global as any).REACT_APP_SUPABASE_URL || null;
+      const key = REACT_APP_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || (global as any).REACT_APP_SUPABASE_ANON_KEY || null;
+      DatabaseManager.setSupabaseConfig(url, key);
+    } catch (e) {
+      console.warn('Failed to set Supabase config from env', e);
+    }
   }, []);
 
   const initializeApp = async () => {
@@ -255,11 +267,7 @@ export default function App() {
               component={debugComponent('ComplaintExportScreen', ComplaintExportScreen)}
               options={{ title: 'Exporter les plaintes' }}
             />
-            <Stack.Screen
-              name="Debug"
-              component={debugComponent('DebugScreen', DebugScreen)}
-              options={{ title: 'Debug DB' }}
-            />
+            {/* Debug screen removed */}
             <Stack.Screen
               name="Apropos"
               component={debugComponent('AproposScreen', AproposScreen)}

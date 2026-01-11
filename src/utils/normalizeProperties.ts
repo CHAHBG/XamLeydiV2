@@ -168,11 +168,39 @@ export function normalizeProperties(raw: Record<string, any> | string | undefine
   const countFromProps = (propsToUse as any).Quel_est_le_nombre_d_affectata || (propsToUse as any).Quel_est_le_nombre_d_affectata_001 || (propsToUse as any).nombre_affectataires || (props as any).Quel_est_le_nombre_d_affectata || (props as any).Quel_est_le_nombre_d_affectata_001 || (props as any).nombre_affectataires || null;
   const affectairesCount = Number(countFromProps) || affectataires.length || 0;
 
+  // Canonicalize common administrative place fields (region / department / commune)
+  const pickProp = (variants: string[]) => {
+    for (const v of variants) {
+      if ((propsToUse as any)[v] !== undefined && (propsToUse as any)[v] !== null) return String((propsToUse as any)[v]).trim();
+      if ((props as any)[v] !== undefined && (props as any)[v] !== null) return String((props as any)[v]).trim();
+      // also check case-insensitive cleaned keys
+      const lower = v.toLowerCase();
+      for (const k of Object.keys(propsToUse)) {
+        if (k.toLowerCase() === lower && (propsToUse as any)[k] !== undefined && (propsToUse as any)[k] !== null) return String((propsToUse as any)[k]).trim();
+      }
+      for (const k of Object.keys(props)) {
+        if (k.toLowerCase() === lower && (props as any)[k] !== undefined && (props as any)[k] !== null) return String((props as any)[k]).trim();
+      }
+    }
+    return null;
+  };
+
+  const canonicalRegion = pickProp(['Region', 'region', 'regionSene', 'regionsene', 'regionSenegal', 'region_senegal', 'regionSen', 'regionSen']);
+  const canonicalDepartment = pickProp(['Department', 'department', 'Departement', 'departement', 'departementSen', 'departmentSen', 'departement_senegal', 'arrondisse', 'arrondissement']);
+  const canonicalCommune = pickProp(['Commune', 'commune', 'communeSen', 'communesen', 'commune_sen', 'communeSenegal']);
+
   return {
     original: props,
     mandataire,
     affectataires,
     affectatairesCount: affectairesCount,
+    // canonical administrative fields
+    region: canonicalRegion || null,
+    Region: canonicalRegion || null,
+    department: canonicalDepartment || null,
+    Department: canonicalDepartment || null,
+    commune: canonicalCommune || null,
+    Commune: canonicalCommune || null,
   };
 }
 

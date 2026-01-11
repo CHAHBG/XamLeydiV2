@@ -9,6 +9,8 @@ if (RN && RN.Linking && RN.Linking.openURL) {
 beforeEach(() => {
   // Reset all mocks to avoid leak between tests
   jest.resetAllMocks();
+  // Ensure __DEV__ is defined for components that reference it
+  (global as any).__DEV__ = true;
   // Ensure Linking.canOpenURL is mocked to allow dial flows in tests
   try {
     if (RN && RN.Linking) {

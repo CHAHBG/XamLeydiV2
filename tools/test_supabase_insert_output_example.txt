@@ -1,0 +1,15 @@
+Example successful response (for reference):
+[
+  {
+    "id": "8a7d6e9b-6f2b-4a2a-8f3e-9e0c1b2d3f4a",
+    "parcel_number": "TEST-PS-123456",
+    "date": "2025-09-23T12:34:56.789Z",
+    "activity": "smoke-test",
+    "commune": "TEST",
+    "village": "TestVillage",
+    "complainant_name": "Test User",
+    "complaint_reason": "smoke test",
+    "source": "manual-test",
+    "created_at": "2025-09-23T12:34:56.789Z"
+  }
+]

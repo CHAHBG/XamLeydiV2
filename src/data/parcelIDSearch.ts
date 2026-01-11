@@ -202,15 +202,51 @@ async function insertParcelIntoDatabase(parcel: any): Promise<boolean> {
     });
     
     // Prepare geometry JSON string
-    const geometryJSON = JSON.stringify(geometry);
+  // If geometry is null/undefined, store as an empty object to avoid creating degenerate [0,0] shapes
+  const geometryToStore = (geometry === null || geometry === undefined) ? {} : geometry;
+  const geometryJSON = JSON.stringify(geometryToStore);
     
-    // Execute SQL insert using safeExecSync instead of direct execSync with parameters
+    // More robust parcel type detection: if JSON properties include obvious collective indicators
+    // (explicit PARCEL_TYP/PARCEL_TYP, parcel_typ, Cas_de_Personne_001 indicating multiple people,
+    // or presence of Prenom_M/Nom_M/Denominat), treat as 'collectif'. Default to 'individuel'.
+    const lk = (k: string) => {
+      if (properties[k] !== undefined && properties[k] !== null) return properties[k];
+      const lower = k.toLowerCase();
+      if (properties[lower] !== undefined && properties[lower] !== null) return properties[lower];
+      return null;
+    };
+
+    let detectedParcelType = 'individuel';
+    try {
+      const explicit = lk('PARCEL_TYP') || lk('parcel_typ') || lk('PARCEL_TYP');
+      const cas = lk('Cas_de_Personne_001') || lk('cas_de_personne_001') || lk('CAS_DE_PERSONNE_001');
+      const prenomMval = lk('Prenom_M') || lk('prenom_m');
+      const nomMval = lk('Nom_M') || lk('nom_m');
+      const denomVal = lk('Denominat') || lk('denominat');
+
+      if (explicit && String(explicit).toLowerCase().includes('col')) {
+        detectedParcelType = 'collectif';
+      } else if (cas && String(cas).toLowerCase().includes('plusieurs')) {
+        detectedParcelType = 'collectif';
+      } else if (prenomMval || nomMval || denomVal) {
+        detectedParcelType = 'collectif';
+      }
+    } catch (e) {
+      // ignore detection errors and keep default
+    }
+
+    // If this is a test parcel marker, propagate a flag inside properties so runtime can filter it
+    const augmentedProperties = {
+      ...properties,
+      ...(parcel.__testParcel ? { __testParcel: true } : {})
+    };
+
     const sql = `
       INSERT INTO parcels 
       (num_parcel, parcel_type, typ_pers, prenom, nom, prenom_m, nom_m, denominat, village, geometry, properties)
-      VALUES ('${finalNumParcel}', '${parcelType}', '${typPers}', '${prenom}', '${nom}', '${prenomM}', '${nomM}', '${denominat}', '${village}', '${geometryJSON.replace(/'/g, "''")}', '${propertiesJSON.replace(/'/g, "''")}')
+      VALUES ('${finalNumParcel}', '${detectedParcelType}', '${typPers}', '${prenom}', '${nom}', '${prenomM}', '${nomM}', '${denominat}', '${village}', '${geometryJSON.replace(/'/g, "''")}', '${JSON.stringify(augmentedProperties).replace(/'/g, "''")}')
     `;
-    
+
     DatabaseManager.db.execSync(sql);
     
     return true;
@@ -242,18 +278,10 @@ function createTestParcel(parcelID: string): any {
       VILLAGE: 'Test Village',
       NOM_1: parcelID,
     },
-    geometry: {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [0, 0],
-          [0, 1],
-          [1, 1],
-          [1, 0],
-          [0, 0]
-        ]
-      ]
-    }
+    // Use null/empty geometry for test parcels so they don't render as a square at 0,0
+    geometry: null,
+    // Mark test parcels explicitly so runtime can filter them out of spatial neighbor results
+    __testParcel: true
   };
 }
 

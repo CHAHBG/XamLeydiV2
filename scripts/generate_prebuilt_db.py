@@ -7,11 +7,56 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Performance optimization: Better DB generation with threading and optimized SQLite settings
+def canonicalize_properties(properties: dict) -> dict:
+    """Return a shallow copy of properties with some common variant keys
+    mapped to canonical names expected by the app UI.
+
+    Examples handled:
+      - Vocation_1 -> Vocation
+      - any key like type_usa / typeusage -> type_usag
+    """
+    if not properties:
+        return properties
+    props = dict(properties)  # shallow copy
+
+    # Canonicalize vocation-like keys
+    if not props.get('Vocation'):
+        for k, v in properties.items():
+            if k and isinstance(k, str) and k.lower().replace('_', '').startswith('vocation') and v:
+                props['Vocation'] = v
+                break
+
+    # Canonicalize type usage keys -> 'type_usag'
+    if not props.get('type_usag'):
+        for k, v in properties.items():
+            if not k or not isinstance(k, str):
+                continue
+            kl = k.lower().replace('_', '').replace(' ', '')
+            # common variants
+            if kl in ('typeusa', 'typeusage', 'typeusag', 'typeusag1', 'typeusa1', 'usage') and v:
+                props['type_usag'] = v
+                break
+
+    # Canonicalize village-like keys -> 'Village'
+    if not props.get('Village'):
+        for k, v in properties.items():
+            if not k or not isinstance(k, str) or not v:
+                continue
+            kl = k.lower().strip()
+            # accept keys like 'village', 'village_name', 'village_sene', 'commune', 'commune_senegal', 'locality'
+            if ('village' in kl or kl.startswith('village') or 'commune' in kl or 'localit' in kl or 'locality' in kl) and v:
+                # prefer shorter names without trailing codes
+                props['Village'] = v
+                break
+
+    return props
 def process_batch(batch, parcel_type):
     """Process a batch of parcels in a separate thread"""
     result = []
     for f in batch:
         properties = f.get('properties', {}) or {}
+        # Produce a canonicalized properties dict so the DB stores app-expected keys
+        properties = canonicalize_properties(properties)
         if parcel_type == 'individuel':
             result.append((
                 properties.get('Num_parcel'),
@@ -60,22 +105,52 @@ def create_optimized_db():
     # Prefer prebuilt copies if present to avoid keeping huge JSON in src/data
     ind_path = root / 'prebuilt' / 'Parcels_individuels.json'
     col_path = root / 'prebuilt' / 'Parcels_collectives.json'
+    def normalize_geojson(obj, name):
+        """Accept either a list of features or a GeoJSON FeatureCollection object.
+        Return a list of feature objects. Raise ValueError with a helpful message
+        if input doesn't match expected shapes.
+        """
+        if obj is None:
+            return []
+        if isinstance(obj, list):
+            return obj
+        if isinstance(obj, dict):
+            # Common GeoJSON shape: { "type": "FeatureCollection", "features": [ ... ] }
+            if 'features' in obj and isinstance(obj['features'], list):
+                return obj['features']
+            # Sometimes users will put a single feature under 'feature'
+            if 'feature' in obj and isinstance(obj['feature'], list):
+                return obj['feature']
+        # If we get here, the structure is unexpected. Give a clear error.
+        raise ValueError(f"Unexpected JSON shape for {name}: expected a list or FeatureCollection with 'features' array")
+
+    # Load individuals JSON
     if ind_path.exists():
         with open(ind_path, 'r', encoding='utf-8') as f:
-            individus = json.load(f)
+            raw_individus = json.load(f)
     else:
         with open(root / 'src' / 'data' / 'Parcels_individuels.json', 'r', encoding='utf-8') as f:
-            individus = json.load(f)
+            raw_individus = json.load(f)
 
+    # Load collectives JSON
     if col_path.exists():
         with open(col_path, 'r', encoding='utf-8') as f:
-            collectifs = json.load(f)
+            raw_collectifs = json.load(f)
     else:
         with open(root / 'src' / 'data' / 'Parcels_collectives.json', 'r', encoding='utf-8') as f:
-            collectifs = json.load(f)
-        
+            raw_collectifs = json.load(f)
+
+    # Normalize shapes into lists of features
+    try:
+        individus = normalize_geojson(raw_individus, 'Parcels_individuels.json')
+        collectifs = normalize_geojson(raw_collectifs, 'Parcels_collectives.json')
+    except ValueError as e:
+        print(f"ERROR: {e}")
+        print("Aborting DB generation. Please ensure the JSON files are either arrays of features or a FeatureCollection with a 'features' array.")
+        return
+
     print(f"JSON loading complete in {time.time() - json_start:.2f}s")
-    print(f"Processing {len(individus) + len(collectifs)} total parcels...")
+    print(f"Processing {len(individus)} individual parcels and {len(collectifs)} collective parcels ({len(individus) + len(collectifs)} total)...")
 
     # Remove existing database if it exists
     if out.exists():

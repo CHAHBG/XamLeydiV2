@@ -90,6 +90,7 @@ function safeParseJSON<T = any>(raw: any): T | null {
 const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) => {
   const params = route?.params || {};
   const { parcel, geometry, properties } = params;
+  const MAX_DIST_METERS = 2000; // 2 km (reduced from 5 km)
 
   const quickExtractProperties = (s: string) => {
     try {
@@ -110,12 +111,13 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
   };
 
   const [propsObj, setPropsObj] = useState<any>(() => {
-    if (parcel) return parcel;
+    // Prefer explicit `properties` param when provided (neighbor navigation passes parsed properties)
     if (properties && typeof properties === 'object') return properties;
     if (properties && typeof properties === 'string') {
       return { ...(parcel || {}), ...quickExtractProperties(properties) };
     }
-    return parcel || {};
+    if (parcel) return parcel;
+    return {};
   });
 
   useEffect(() => {
@@ -363,6 +365,40 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
     return fallback;
   }, []);
 
+  // Try many variants and fallbacks for a given logical field name
+  const getCanonicalValue = useCallback((obj: any, normalizedObj: any, logicalKey: 'Vocation' | 'type_usag') => {
+    const variantsMap: Record<string, string[]> = {
+      Vocation: ['Vocation', 'Vocation_1', 'vocation', 'vocation_1', 'Vocation1', 'vocation1', 'vocation_1_col', 'Vocation_col'],
+      type_usag: ['type_usag', 'type_usa', 'typeusage', 'type_usage', 'Type_usage', 'type_usa_1', 'type_usa_col', 'type_usag_col'],
+    };
+    const variants = variantsMap[logicalKey] || [logicalKey];
+    // check normalizedProps/normalizedObj first
+    if (normalizedObj && typeof normalizedObj === 'object') {
+      for (const k of variants) {
+        if (normalizedObj[k] !== undefined && normalizedObj[k] !== null && String(normalizedObj[k]).trim() !== '') return String(normalizedObj[k]);
+        const kl = k.toLowerCase();
+        if (normalizedObj[kl] !== undefined && normalizedObj[kl] !== null && String(normalizedObj[kl]).trim() !== '') return String(normalizedObj[kl]);
+      }
+    }
+    // check top-level props
+    if (obj && typeof obj === 'object') {
+      for (const k of variants) {
+        if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return String(obj[k]);
+        const kl = k.toLowerCase();
+        if (obj[kl] !== undefined && obj[kl] !== null && String(obj[kl]).trim() !== '') return String(obj[kl]);
+      }
+      // nested properties
+      if (obj.properties && typeof obj.properties === 'object') {
+        for (const k of variants) {
+          if (obj.properties[k] !== undefined && obj.properties[k] !== null && String(obj.properties[k]).trim() !== '') return String(obj.properties[k]);
+          const kl = k.toLowerCase();
+          if (obj.properties[kl] !== undefined && obj.properties[kl] !== null && String(obj.properties[kl]).trim() !== '') return String(obj.properties[kl]);
+        }
+      }
+    }
+    return 'Non disponible';
+  }, []);
+
   const pickMandField = useCallback((keys: string[], normalizedKey?: string, localProps?: any) => {
     if (normalizedKey && normalizedProps?.mandataire) {
       const nv = normalizedProps.mandataire[normalizedKey];
@@ -445,19 +481,128 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
         const village = String(propsObj?.Village || propsObj?.village || '');
         if (village) {
           const byVillage = await DatabaseManager.getParcelsByVillage?.(village) || [];
-          list = byVillage.filter((p: any) => String(p?.num_parcel || p?.Num_parcel || p?.id) !== String(parcelNum));
+          // remove self
+          let candidates = byVillage.filter((p: any) => String(p?.num_parcel || p?.Num_parcel || p?.id) !== String(parcelNum));
+
+          // If we have geometry for the current parcel, compute centroid and filter candidates by distance
+          try {
+            const rawGeom = geometry || (parcel && parcel.geometry) || propsObj?.geometry || propsObj || null;
+            const parseGeom = (g: any) => {
+              try {
+                return typeof g === 'string' ? safeParseJSON(g) || null : g || null;
+              } catch (e) { return null; }
+            };
+            const baseGeom = parseGeom(rawGeom);
+            let baseCentroid: { latitude: number; longitude: number } | null = null;
+            if (baseGeom && baseGeom.type && baseGeom.coordinates) {
+              let coords0: any = null;
+              if (baseGeom.type === 'Polygon' && Array.isArray(baseGeom.coordinates[0])) coords0 = baseGeom.coordinates[0];
+              else if (baseGeom.type === 'MultiPolygon' && Array.isArray(baseGeom.coordinates) && Array.isArray(baseGeom.coordinates[0]) && Array.isArray(baseGeom.coordinates[0][0])) coords0 = baseGeom.coordinates[0][0];
+              if (coords0) {
+                const sc = sanitizeCoords(coords0);
+                if (sc.length > 0) {
+                  let latSum = 0, lonSum = 0;
+                  sc.forEach((pt: { latitude: number; longitude: number }) => { latSum += pt.latitude; lonSum += pt.longitude; });
+                  baseCentroid = { latitude: latSum / sc.length, longitude: lonSum / sc.length };
+                }
+              }
+            }
+
+            // distance helper meters
+            const haversine = (a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) => {
+              const toRad = (n: number) => n * Math.PI / 180;
+              const R = 6371000;
+              const dLat = toRad(b.latitude - a.latitude);
+              const dLon = toRad(b.longitude - a.longitude);
+              const lat1 = toRad(a.latitude);
+              const lat2 = toRad(b.latitude);
+              const h = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2);
+              return 2 * R * Math.asin(Math.sqrt(h));
+            };
+
+            if (baseCentroid && candidates.length > 0) {
+              const filtered: any[] = [];
+              for (const c of candidates) {
+                try {
+                  const cgRaw = c.geometry || c.geometry_string || c.geom || null;
+                  const cg = typeof cgRaw === 'string' ? safeParseJSON(cgRaw) || null : cgRaw || null;
+                  let coordsC: any = null;
+                  if (cg && cg.type === 'Polygon' && Array.isArray(cg.coordinates) && Array.isArray(cg.coordinates[0])) coordsC = cg.coordinates[0];
+                  else if (cg && cg.type === 'MultiPolygon' && Array.isArray(cg.coordinates) && Array.isArray(cg.coordinates[0]) && Array.isArray(cg.coordinates[0][0])) coordsC = cg.coordinates[0][0];
+                  if (!coordsC) continue;
+                  const sc2 = sanitizeCoords(coordsC);
+                  if (!sc2 || sc2.length === 0) continue;
+                  let latSum2 = 0, lonSum2 = 0;
+                  sc2.forEach((pt: { latitude: number; longitude: number }) => { latSum2 += pt.latitude; lonSum2 += pt.longitude; });
+                  const centroidC = { latitude: latSum2 / sc2.length, longitude: lonSum2 / sc2.length };
+                  const d = haversine(baseCentroid, centroidC);
+                  if (d <= MAX_DIST_METERS) filtered.push(c);
+                } catch (e) {
+                  // ignore candidate if parsing fails
+                }
+              }
+              if (filtered.length > 0) candidates = filtered;
+            }
+          } catch (e) {
+            // if anything went wrong, keep the original candidates
+          }
+
+          list = candidates;
           if (list.length > 10) list = list.slice(0, 10);
         }
       }
       if (Array.isArray(list) && list.length > 0) {
+        // normalize neighbor geometry and properties for consistent UI behavior
         const parsedList = list.map((n: any) => {
-          const rawGeom = n.geometry || n.geometry_string || n.geom;
-          n.__parsedGeometry = safeParseJSON(rawGeom) || rawGeom || null;
+          const rawGeom = n.geometry || n.geometry_string || n.geom || n;
+          try {
+            const { normalizeGeometry } = require('../utils/geometryUtils');
+            n.__parsedGeometry = normalizeGeometry(rawGeom) || safeParseJSON(rawGeom) || rawGeom || null;
+          } catch (e) {
+            n.__parsedGeometry = safeParseJSON(rawGeom) || rawGeom || null;
+          }
+
           const rawProps = n.properties || n.properties_string || n.props || n;
-          n.__parsedProps = safeParseJSON(rawProps) || rawProps || null;
+          try {
+            const normalizeProperties = require('../utils/normalizeProperties').default;
+            const parsedProps = safeParseJSON(rawProps) || rawProps || {};
+            const structured = normalizeProperties(parsedProps);
+            n.__parsedProps = structured;
+            // Build a flattened / canonical props object to ensure common keys exist for UI
+            const flat: any = (typeof parsedProps === 'object' && parsedProps) ? { ...parsedProps } : {};
+            // helper to pick variant keys
+            const pickVariant = (obj: any, variants: string[]) => {
+              for (const v of variants) {
+                if (obj[v] !== undefined && obj[v] !== null && String(obj[v]).trim() !== '') return obj[v];
+              }
+              return undefined;
+            };
+            const vocationVal = pickVariant(parsedProps, ['Vocation', 'Vocation_1', 'vocation', 'vocation_1', 'Vocation1', 'vocation1']);
+            if (vocationVal !== undefined) flat.Vocation = vocationVal;
+            const typeVal = pickVariant(parsedProps, ['type_usag', 'type_usa', 'typeusage', 'type_usage', 'Type_usage', 'type_usa_1']);
+            if (typeVal !== undefined) flat.type_usag = typeVal;
+            // ensure Num_parcel variants
+            const numVal = pickVariant(parsedProps, ['Num_parcel', 'num_parcel', 'Numparcel', 'numparcel', 'num_parc']);
+            if (numVal !== undefined) flat.Num_parcel = numVal;
+            n.__parsedPropsFlat = flat;
+          } catch (e) {
+            const parsed = safeParseJSON(rawProps) || rawProps || {};
+            n.__parsedProps = parsed;
+            n.__parsedPropsFlat = (typeof parsed === 'object' && parsed) ? { ...parsed } : parsed;
+          }
           return n;
         });
         setNeighborParcels(parsedList);
+        // ensure map updates to show neighbors immediately
+        try { console.debug && console.debug('loadNeighborParcels parsed neighbors count', parsedList.length); } catch (e) {}
+        try {
+          // log a compact summary of canonical keys for debugging
+          const summary = parsedList.map((n: any) => ({ id: n?.num_parcel || n?.id || null, Vocation: (n.__parsedPropsFlat||n.__parsedProps||n.properties||{}).Vocation, type_usag: (n.__parsedPropsFlat||n.__parsedProps||n.properties||{}).type_usag }));
+          console.debug && console.debug('loadNeighborParcels neighbor summary', summary.slice(0, 20));
+        } catch (e) {}
+        setTimeout(() => {
+          try { fitMapToParcel(); } catch (e) { console.warn('fitMapToParcel after neighbors failed', e); }
+        }, 120);
       } else {
         setNeighborParcels([]);
       }
@@ -473,14 +618,92 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
     try {
       const rawGeom = neighbor?.__parsedGeometry ?? neighbor?.geometry ?? neighbor?.geometry_string ?? neighbor?.geom;
       const parsedGeom = typeof rawGeom === 'string' ? safeParseJSON(rawGeom) || null : rawGeom || null;
-      const parsedProps = neighbor.__parsedProps || neighbor.properties || neighbor;
-      const params: any = { parcel: neighbor, properties: parsedProps };
+      const parsedProps = neighbor.__parsedPropsFlat || neighbor.__parsedProps || neighbor.properties || neighbor;
+      try { console.debug && console.debug('navigateToNeighbor using parsedProps keys', Object.keys(parsedProps || {}).slice(0,40)); } catch (e) {}
+      try { console.debug && console.debug('navigateToNeighbor parsedProps keys', Object.keys(parsedProps || {}).slice(0,30), 'parcelId', neighbor?.num_parcel || neighbor?.id); } catch (e) {}
+      // Merge parsed flat props and parsed geometry into the neighbor parcel object so the detail screen has canonical props and geometry immediately
+      const mergedParcel: any = { ...(neighbor || {}), ...(parsedProps || {}) };
+      if (parsedGeom && parsedGeom.type && parsedGeom.coordinates) mergedParcel.geometry = parsedGeom;
+      else if (neighbor && (neighbor.geometry || neighbor.geometry_string || neighbor.geom)) mergedParcel.geometry = neighbor.geometry || neighbor.geometry_string || neighbor.geom;
+      // Try to produce a normalized parsed geometry object to attach as __parsedGeometry so downstream code can use it deterministically
+      try {
+        const { normalizeGeometry } = require('../utils/geometryUtils');
+        const norm = normalizeGeometry(mergedParcel.geometry || mergedParcel.__parsedGeometry || null) || null;
+        if (norm) {
+          mergedParcel.__parsedGeometry = norm;
+          // also set geometry to a JSON string for DB-style consumers if needed
+          try { mergedParcel.geometry = typeof norm === 'object' ? JSON.stringify(norm) : mergedParcel.geometry; } catch (e) {}
+        }
+      } catch (e) {
+        // ignore - normalization optional
+      }
+      const params: any = { parcel: mergedParcel, properties: parsedProps, __directNavigate: true };
       if (parsedGeom && parsedGeom.type && parsedGeom.coordinates) params.geometry = parsedGeom;
       navigation.push('ParcelDetail', params);
     } catch (e) {
       try { navigation.push('ParcelDetail', { parcel: neighbor }); } catch (_e) { /* ignore */ }
     }
   }, [navigation]);
+
+  // If the route params indicate we were navigated to directly with parsed props,
+  // ensure we adopt those props immediately to avoid any intermediate 'Non disponible' UI.
+  useEffect(() => {
+    try {
+      const incoming = route?.params || {};
+      if (incoming.__directNavigate) {
+        const p = incoming.properties || incoming.props || incoming.parcel || {};
+        if (p && typeof p === 'object') {
+          setPropsObj(p);
+          try {
+            const normalized = normalizeProperties(p);
+            if (normalized) setNormalizedProps(normalized);
+          } catch (e) {}
+        }
+        // If geometry was provided in params, parse and set mainParcelRings + centroid immediately
+        try {
+          const geom = incoming.geometry || incoming.parcel?.geometry || null;
+          if (geom && geom.type && geom.coordinates) {
+            const parseAndSet = (g: any) => {
+              const rings: any[] = [];
+              if (g.type === 'Polygon' && Array.isArray(g.coordinates[0])) {
+                let coords = sanitizeCoords(g.coordinates[0]);
+                if (coords.length > 1800) coords = decimateCoords(coords);
+                rings.push(coords);
+              } else if (g.type === 'MultiPolygon' && Array.isArray(g.coordinates)) {
+                g.coordinates.forEach((poly: any) => {
+                  if (Array.isArray(poly) && Array.isArray(poly[0])) {
+                    let coords = sanitizeCoords(poly[0]);
+                    if (coords.length > 1800) coords = decimateCoords(coords);
+                    rings.push(coords);
+                  }
+                });
+              }
+              if (rings.length > 0 && rings[0].length > 0) {
+                const firstRing = rings[0] as { latitude: number; longitude: number }[];
+                let latSum = 0, lonSum = 0;
+                for (const p0 of firstRing) { const lat = Number(p0.latitude); const lon = Number(p0.longitude); if (isFinite(lat) && isFinite(lon)) { latSum += lat; lonSum += lon; } }
+                centroidRef.current = { latitude: latSum / firstRing.length, longitude: lonSum / firstRing.length };
+              }
+              setMainParcelRings(rings);
+            };
+            parseAndSet(geom);
+            setTimeout(() => { try { fitMapToParcel(); } catch (e) {} }, 160);
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }, [route?.params]);
+
+  const handleNeighborPress = useCallback((neighbor: any) => {
+    try {
+      const geom = neighbor?.__parsedGeometry || neighbor?.geometry || neighbor?.geometry_string || neighbor?.geom || null;
+      const propsFlat = neighbor?.__parsedPropsFlat || neighbor?.__parsedProps || neighbor?.properties || neighbor || {};
+      console.debug && console.debug('handleNeighborPress neighbor id', neighbor?.num_parcel || neighbor?.id || null, 'geomType', geom?.type || null, 'centroid?', centroidRef.current || null);
+      try { console.debug && console.debug('handleNeighborPress propsFlat sample keys', Object.keys(propsFlat || {}).slice(0,40)); } catch (e) {}
+      try { console.debug && console.debug('handleNeighborPress geom preview', (geom && geom.coordinates) ? (Array.isArray(geom.coordinates) ? geom.coordinates[0] : geom.coordinates) : null); } catch (e) {}
+    } catch (e) {}
+    navigateToNeighbor(neighbor);
+  }, [navigateToNeighbor]);
 
   useEffect(() => {
     if (showNeighbors && neighborParcels.length === 0 && !loadingNeighbors) {
@@ -531,9 +754,9 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
         });
       }
       if (rings.length > 0 && rings[0].length > 0) {
-        const firstRing = rings[0];
+        const firstRing = rings[0] as { latitude: number; longitude: number }[];
         let latSum = 0, lonSum = 0;
-        firstRing.forEach((p) => { latSum += p.latitude; lonSum += p.longitude; });
+        firstRing.forEach((p: { latitude: number; longitude: number }) => { const lat = Number(p.latitude); const lon = Number(p.longitude); if (isFinite(lat) && isFinite(lon)) { latSum += lat; lonSum += lon; } });
         centroidRef.current = { latitude: latSum / firstRing.length, longitude: lonSum / firstRing.length };
       }
       setMainParcelRings(rings);
@@ -613,14 +836,39 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
   }, []);
 
   const fitMapToParcel = useCallback(() => {
-    if (!mapRef.current || mainParcelRings.length === 0) return;
+    if (!mapRef.current) return;
+    // compute the main geometry to include
     const mainGeom = geometry || (parcel && parcel.geometry) || null;
     const allCoordinates = collectFitCoordinates(mainGeom, showNeighbors ? neighborParcels : []);
-    if (allCoordinates.length > 0) {
+    try { console.debug && console.debug('fitMapToParcel allCoordinates length', allCoordinates.length, 'showNeighbors', showNeighbors, 'neighborParcels', neighborParcels.length); } catch (e) {}
+
+    // If we have too few points or none, fallback to centroid-based zoom to avoid world zoom-out
+    if (allCoordinates.length >= 3) {
       const padding = showNeighbors ? { top: 50, right: 50, bottom: 50, left: 50 } : { top: 20, right: 20, bottom: 20, left: 20 };
-      mapRef.current.fitToCoordinates(allCoordinates, { edgePadding: padding, animated: true });
-    } else if (centroidRef.current) {
-      centerOnParcel();
+      try {
+        mapRef.current.fitToCoordinates(allCoordinates, { edgePadding: padding, animated: true });
+        return;
+      } catch (e) {
+        console.warn('fitToCoordinates failed, falling back to centroid', e);
+      }
+    }
+
+    // Fallback: center on centroid and set a reasonable zoom
+    if (centroidRef.current) {
+      const region = {
+        latitude: centroidRef.current.latitude,
+        longitude: centroidRef.current.longitude,
+        latitudeDelta: 0.008,
+        longitudeDelta: 0.008,
+      };
+      try {
+        mapRef.current.animateToRegion?.(region, 600) || mapRef.current.animateCamera?.({ center: { latitude: region.latitude, longitude: region.longitude }, zoom: 16 }, { duration: 600 });
+        try { console.debug && console.debug('fitMapToParcel used centroid fallback', centroidRef.current); } catch (e) {}
+      } catch (e) {
+        console.warn('centroid fallback animate failed', e);
+      }
+    } else {
+      try { console.debug && console.debug('fitMapToParcel: no centroid available to fallback to'); } catch (e) {}
     }
   }, [mainParcelRings, neighborParcels, showNeighbors, geometry, parcel]);
 
@@ -686,15 +934,24 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
   );
 
   const renderParcelInfo = (props: any) => (
-    <ParcelInfo
-      numParcel={props?.Num_parcel}
-      village={getValueOrFallback(props, 'Village')}
-      region={getValueOrFallback(props, 'regionSenegal') || getValueOrFallback(props, 'Region') || getValueOrFallback(props, 'region')}
-      department={getValueOrFallback(props, 'departmentSenegal') || getValueOrFallback(props, 'Department') || getValueOrFallback(props, 'department')}
-      commune={getValueOrFallback(props, 'communeSenegal') || getValueOrFallback(props, 'Commune') || getValueOrFallback(props, 'commune')}
-      vocation={getValueOrFallback(props, 'Vocation')}
-      typeUsage={getValueOrFallback(props, 'type_usag')}
-    />
+    (() => {
+      try {
+  const v = getCanonicalValue(props, normalizedProps || props, 'Vocation');
+  const t = getCanonicalValue(props, normalizedProps || props, 'type_usag');
+  console.debug && console.debug('renderParcelInfo props keys', Object.keys(props || {}).slice(0,40), 'canonical Vocation->', v, 'canonical type_usag->', t);
+      } catch (e) {}
+      return (
+        <ParcelInfo
+          numParcel={props?.Num_parcel}
+          village={getValueOrFallback(props, 'Village')}
+          region={getValueOrFallback(props, 'regionSenegal') || getValueOrFallback(props, 'Region') || getValueOrFallback(props, 'region')}
+          department={getValueOrFallback(props, 'departmentSenegal') || getValueOrFallback(props, 'Department') || getValueOrFallback(props, 'department')}
+          commune={getValueOrFallback(props, 'communeSenegal') || getValueOrFallback(props, 'Commune') || getValueOrFallback(props, 'commune')}
+          vocation={getCanonicalValue(props, normalizedProps || props, 'Vocation')}
+          typeUsage={getCanonicalValue(props, normalizedProps || props, 'type_usag')}
+        />
+      );
+    })()
   );
 
   const renderParcelCollectif = (props: any) => {
@@ -710,7 +967,7 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
 
     const indexedAffList = useMemo(() => {
       if (affListRaw.length > 0) return affListRaw;
-      const list = [];
+  const list: Array<{ prenom: string; nom: string; numero_piece: string; telephone: string; date_naiss: string; residence: string; sexe: string; }> = [];
       const pick = (keys: string[], fieldNameHint: string, idx: number) => {
         for (const k of keys) {
           if (propsObj?.[k] && String(propsObj[k]).trim() !== '-') return String(propsObj[k]).trim();
@@ -721,7 +978,7 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
         }
         return '';
       };
-      for (let idx = 1; idx <= 27; idx++) {
+  for (let idx = 1; idx <= 27; idx++) {
         const i2 = String(idx).padStart(2, '0');
         const prenom = pick([`Prenom_${i2}`, `Prenom_${idx}`, `prenom_${i2}`, `Prenom_${i2}_COL`, `Prenom_${i2}_col`], 'prenom', idx);
         const nom = pick([`Nom_${i2}`, `Nom_${idx}`, `nom_${i2}`, `Nom_${i2}_COL`, `Nom_${i2}_col`], 'nom', idx);
@@ -731,13 +988,13 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
         const residence = pick([`Residence_${i2}`, `Residence_${idx}`, `residence_${i2}`], 'residence', idx);
         const sexe = pick([`Sexe_${i2}`, `Sexe_${idx}`, `sexe_${i2}`], 'sexe', idx);
         if (prenom || nom || numero_piece || telephone || date_naiss || residence) {
-          (list as any).push({ prenom, nom, numero_piece, telephone, date_naiss, residence, sexe });
+          list.push({ prenom, nom, numero_piece, telephone, date_naiss, residence, sexe });
         }
       }
       return list;
     }, [affListRaw, propsObj]);
 
-    const affList = useMemo(() => indexedAffList.filter(a => a.prenom || a.nom || a.numero_piece || a.telephone || a.date_naiss || a.residence), [indexedAffList]);
+  const affList = useMemo(() => indexedAffList.filter((a: { prenom?: string; nom?: string; numero_piece?: string; telephone?: string; date_naiss?: string; residence?: string }) => a.prenom || a.nom || a.numero_piece || a.telephone || a.date_naiss || a.residence), [indexedAffList]);
 
     const affCount = normalizedProps?.affectatairesCount ?? (affectatairesMerged ? String(affectatairesMerged.Prenom || '').split('\n').filter(Boolean).length : affList.length || 0);
 
@@ -988,9 +1245,9 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
                           marker = { latitude: latSum / coords.length, longitude: lngSum / coords.length };
                           return (
                             <React.Fragment key={`nbr-${nIdx}`}>
-                              <Polygon coordinates={coords} fillColor="rgba(76, 175, 80, 0.25)" strokeColor="#1b5e20" strokeWidth={2} zIndex={3} tappable onPress={() => navigateToNeighbor(neighbor)} />
+                              <Polygon coordinates={coords} fillColor="rgba(76, 175, 80, 0.25)" strokeColor="#1b5e20" strokeWidth={2} zIndex={3} tappable onPress={() => handleNeighborPress(neighbor)} />
                               {marker && (
-                                <Marker coordinate={marker} tracksViewChanges={false} onPress={() => navigateToNeighbor(neighbor)}>
+                                <Marker coordinate={marker} tracksViewChanges={false} onPress={() => handleNeighborPress(neighbor)}>
                                   <View style={{ backgroundColor: 'white', padding: 4, borderRadius: 6, borderWidth: 1, borderColor: '#1b5e20' }}>
                                     <Text style={{ fontSize: 10, fontWeight: '700' }}>{neighbor.num_parcel || neighbor.num_parc || neighbor.id}</Text>
                                   </View>
@@ -1082,7 +1339,7 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
                       return (
                         <TouchableOpacity
                           key={neighbor.id || neighbor.num_parcel || `neighbor-${idx}`}
-                          onPress={() => navigateToNeighbor(neighbor)}
+                          onPress={() => handleNeighborPress(neighbor)}
                           style={{
                             paddingVertical: 12,
                             paddingHorizontal: 16,
@@ -1121,7 +1378,11 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
               )}
               <TouchableOpacity 
                 style={[styles.complaintButton, { paddingBottom: Math.max(12, insets.bottom + 8) }]}
-                onPress={() => navigation.navigate('ComplaintForm', { parcelNumber: propsObj?.Num_parcel || parcel?.num_parcel })}
+                onPress={() => {
+                  const num = propsObj?.Num_parcel || propsObj?.num_parcel || parcel?.num_parcel || '';
+                  const village = propsObj?.Village || propsObj?.village || parcel?.village || '';
+                  navigation.navigate('ComplaintWizard', { parcel: { ...(parcel || {}), num_parcel: num, village, properties: propsObj } });
+                }}
               >
                 <Text style={styles.complaintButtonText}>Déposer une réclamation</Text>
               </TouchableOpacity>

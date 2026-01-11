@@ -7,6 +7,9 @@ import DatabaseManager from '../data/database';
 import theme from '../theme';
 import { Complaint } from '../types';
 import SharedCOMMUNES from '../constants/communes';
+import VILLAGES from '../constants/villages';
+// require Fuse to avoid missing types in this project setup
+const Fuse: any = require('fuse.js');
 
 // legacy dynamic import removed; use CameraView and permission hook
 
@@ -22,7 +25,14 @@ const RECEPTION_MODES = [
 ];
 
 function generateId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  // Generate a UUID v4 for use as the local complaint id so it can be
+  // reused as the remote id on the server. This keeps local and remote ids
+  // identical and makes edits/upserts deterministic.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 interface ComplaintFormScreenProps {
@@ -39,11 +49,13 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
     parcelNumber: (route?.params?.parcelNumber ?? '') as string,
     date: new Date().toISOString().slice(0, 10),
     activity: '',
+    village: '',
     commune: '',
     complainantName: '',
     complainantSex: '',
     complainantId: '',
     complainantContact: '',
+    complaintFunction: '',
     complaintReason: '',
     complaintReceptionMode: '',
     complaintCategory: '',
@@ -52,8 +64,20 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
   } as Complaint );
 
   const [loading, setLoading] = useState(false);
+  const [sentRemote, setSentRemote] = useState(false);
   const [communeMenuVisible, setCommuneMenuVisible] = useState(false);
   const [receptionMenuVisible, setReceptionMenuVisible] = useState(false);
+  const [villageQuery, setVillageQuery] = useState('');
+  const [villageSuggestions, setVillageSuggestions] = useState<string[]>([]);
+
+  // Basic form validity: required fields must be present to allow immediate send
+  const isFormValid = (String(form.complainantName || '').trim().length > 0) && (String(form.complaintReason || '').trim().length > 0);
+
+  // Build a Fuse index for fuzzy search. Keep it stable across renders.
+  const fuseRef = React.useRef<any | null>(null);
+  if (!fuseRef.current) {
+    fuseRef.current = new Fuse(VILLAGES, { includeScore: true, threshold: 0.4, keys: [] as any });
+  }
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   // camera permission handled via expo-camera hook when available
   const CameraModule: any = ExpoCamera as any;
@@ -62,6 +86,9 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
   const [permission, requestPermission] = useCameraPermissionsHook ? useCameraPermissionsHook() : [null, async () => ({ granted: false })];
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // synchronous reentry guard to prevent double-submit before state updates flush
+  const sendingNowRef = React.useRef(false);
 
   // Check database readiness on mount
   React.useEffect(() => {
@@ -78,7 +105,11 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
     checkDb();
   }, []);
 
-  const handleChange = (key: keyof Complaint, value: string) => setForm({ ...form, [key]: value });
+  const handleChange = (key: keyof Complaint, value: string) => {
+    // if user edits after a send, re-enable the Envoyer button
+    if (sentRemote) setSentRemote(false);
+    setForm({ ...form, [key]: value });
+  };
 
   // permission is handled via resolved hook above
   const handleStartScan = async () => {
@@ -148,7 +179,7 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
       };
       
       // Submit to database
-      const complaintId = await DatabaseManager.addComplaint(optimizedForm);
+        const savedId = await DatabaseManager.addComplaint(optimizedForm);
       
       // Show success message and navigate back
       Alert.alert(
@@ -176,6 +207,57 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
     } finally {
       // Always reset loading state
       setLoading(false);
+    }
+  };
+
+  const handleSendNow = async () => {
+    // send the current draft to supabase (best-effort)
+    // use sendingNowRef to synchronously block reentry (state updates are async)
+    if (loading || sendingNowRef.current) return;
+    sendingNowRef.current = true;
+    try {
+      setLoading(true);
+      const optimizedForm = { ...form };
+
+      // Ensure a stable remote_id so concurrent sends use the same id.
+      const looksLikeUuid = (s: any) => typeof s === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(s);
+      if (!optimizedForm.remote_id || !looksLikeUuid(optimizedForm.remote_id)) {
+        const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+        optimizedForm.remote_id = uuidv4();
+      }
+
+      // mark that the automatic background submit should be skipped because
+      // the UI is explicitly triggering a send now. This avoids the background
+      // task and the manual send colliding and producing duplicate attempts.
+      optimizedForm._skip_background_submit = true;
+
+    // Persist locally (with remote_id) before sending so DatabaseManager.sendComplaint
+    // can load the same remote_id when called by other concurrent code paths.
+    const savedIdNow = await DatabaseManager.addComplaint(optimizedForm);
+
+    const resp = await DatabaseManager.sendComplaint(savedIdNow);
+      if (resp && resp.sent) {
+        setSentRemote(true);
+        Alert.alert('Envoyé', 'La plainte a été envoyée au serveur distant.');
+      } else {
+        // If the server reports the row already exists, treat as sent and inform user
+        if (resp && (resp.code === 'already_exists' || resp.resp === 'already_exists' || resp.resp === 'already_sent')) {
+          setSentRemote(true);
+          Alert.alert('Info', 'Plainte déjà envoyée.');
+        } else {
+          Alert.alert('Erreur envoi', 'La plainte n\'a pas pu être envoyée. Elle sera réessayée en arrière-plan.');
+        }
+      }
+    } catch (e) {
+      console.warn('handleSendNow failed', e);
+      Alert.alert('Erreur', 'Impossible d\'envoyer la plainte pour le moment.');
+    } finally {
+      setLoading(false);
+      sendingNowRef.current = false;
     }
   };
 
@@ -269,14 +351,75 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
                 <TouchableOpacity onPress={() => { handleChange('commune', ''); setCommuneMenuVisible(false); }} style={styles.dropdownItem}>
                   <RNText>-- Aucun --</RNText>
                 </TouchableOpacity>
-                {SharedCOMMUNES.map((c) => (
-                  <TouchableOpacity key={c} onPress={() => { handleChange('commune', c); setCommuneMenuVisible(false); }} style={styles.dropdownItem}>
+                {SharedCOMMUNES.map((c, idx) => (
+                  <TouchableOpacity key={`commune-${idx}-${c}`} onPress={() => { handleChange('commune', c); setCommuneMenuVisible(false); }} style={styles.dropdownItem}>
                     <RNText>{c}</RNText>
                   </TouchableOpacity>
                 ))}
               </View>
             </TouchableOpacity>
           </RNModal>
+        </View>
+
+        {/* Village typed input with live, non-blocking suggestions */}
+        <View style={{ marginBottom: 8 }}>
+          <TextInput
+            value={form.village}
+            onChangeText={(text: string) => {
+              handleChange('village', text);
+              setVillageQuery(text);
+              const q = String(text || '').trim();
+              if (!q) {
+                setVillageSuggestions([]);
+              } else {
+                // Use Fuse fuzzy search for typo-tolerant suggestions
+                const fuse = fuseRef.current!;
+                const results = fuse.search(q, { limit: 50 });
+                const suggestions: string[] = results.map((r: any) => r.item as string);
+                setVillageSuggestions(suggestions);
+              }
+            }}
+            style={styles.input}
+            placeholder="Village (tapez pour suggérer)"
+            placeholderTextColor={theme.appColors.subtext}
+            // keep keyboard focus when interacting with suggestions
+            keyboardAppearance="default"
+          />
+
+          {/* Inline suggestion list (non-modal) so typing isn't blocked. Scrollable and capped height. */}
+          {villageSuggestions.length > 0 && (
+            <View style={[styles.suggestionsContainer, { maxHeight: 240 }]}>
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <TouchableOpacity onPress={() => { handleChange('village', ''); setVillageSuggestions([]); }} style={styles.dropdownItem}>
+                  <RNText>-- Aucun --</RNText>
+                </TouchableOpacity>
+                {villageSuggestions.map((v) => {
+                  const q = String(villageQuery || '').trim().toLowerCase();
+                  const lower = v.toLowerCase();
+                  const idx = q ? lower.indexOf(q) : -1;
+                  let content: React.ReactNode = v;
+                  if (idx >= 0 && q.length > 0) {
+                    const before = v.slice(0, idx);
+                    const match = v.slice(idx, idx + q.length);
+                    const after = v.slice(idx + q.length);
+                    content = (
+                      <RNText>
+                        <RNText>{before}</RNText>
+                        <RNText style={styles.suggestionHighlight}>{match}</RNText>
+                        <RNText>{after}</RNText>
+                      </RNText>
+                    );
+                  }
+
+                  return (
+                    <TouchableOpacity key={v} onPress={() => { handleChange('village', v); setVillageSuggestions([]); }} style={styles.dropdownItem}>
+                      {typeof content === 'string' ? <RNText>{content}</RNText> : content}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
         <RNText style={styles.section}>2. Informations du plaignant</RNText>
@@ -369,6 +512,17 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
           </View>
         </View>
 
+        <RNText style={styles.section}>4.1 Fonction concernée</RNText>
+        <View style={styles.fieldSurface}>
+          <TextInput
+            value={form.complaintFunction}
+            onChangeText={(v: string) => handleChange('complaintFunction', v)}
+            style={styles.input}
+            placeholder="Fonction / service concerné"
+            placeholderTextColor={theme.appColors.subtext}
+          />
+        </View>
+
         <RNText style={styles.section}>5. Brève description</RNText>
         <View style={styles.fieldSurface}>
           <TextInput
@@ -398,44 +552,77 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
         {dbError ? (
           <RNText style={{ color: '#E65100', fontWeight: 'bold', marginBottom: 8, textAlign: 'center' }}>{dbError}</RNText>
         ) : null}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading || !dbReady}>
-          <RNText style={styles.saveButtonText}>{loading ? 'Enregistrement...' : 'Enregistrer la plainte'}</RNText>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', width: '100%' }}>
+          <TouchableOpacity style={[styles.saveButton, { flex: 1, marginRight: 8 }]} onPress={handleSubmit} disabled={loading || !dbReady}>
+            <RNText style={styles.saveButtonText}>{loading ? 'Enregistrement...' : 'Enregistrer la plainte'}</RNText>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.sendButton, { width: 140, opacity: (loading || !dbReady || sentRemote || !isFormValid) ? 0.6 : 1 }]} onPress={handleSendNow} disabled={loading || !dbReady || sentRemote || !isFormValid}>
+            <RNText style={styles.sendButtonText}>{sentRemote ? 'Envoyé ✓' : 'Envoyer'}</RNText>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  section: { fontWeight: '700', marginTop: 16, marginBottom: 8, fontSize: 16, color: theme.appColors.text },
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  section: { 
+    fontWeight: '700', 
+    marginTop: 18, 
+    marginBottom: 10, 
+    fontSize: 17, 
+    color: theme.appColors.text,
+    letterSpacing: -0.3,
+  },
   input: {
-    marginBottom: 8,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 16,
     color: theme.appColors.text,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   disabledInput: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F5F5F5',
     color: theme.appColors.subtext,
+    borderColor: '#E8E8E8',
   },
-  fieldSurface: { padding: 12, borderRadius: 8, marginBottom: 12, backgroundColor: theme.appColors.surface, elevation: 2 },
+  fieldSurface: { 
+    padding: 16, 
+    borderRadius: 16, 
+    marginBottom: 14, 
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
   outlinedButton: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.appColors.primary,
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    minWidth: 44,
-    marginBottom: 4,
+    backgroundColor: '#FFFFFF',
+    minWidth: 48,
+    marginBottom: 6,
+    shadowColor: theme.appColors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   outlinedButtonText: {
     color: theme.appColors.primary,
@@ -449,15 +636,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 8,
-    minWidth: 220,
-    elevation: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 10,
+    minWidth: 240,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  suggestionsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: '#E8E8E8',
+    marginTop: 8,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  suggestionHighlight: {
+    backgroundColor: '#fff9c4',
+    fontWeight: '700',
   },
   dropdownItem: {
     paddingVertical: 10,
@@ -466,36 +670,74 @@ const styles = StyleSheet.create({
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: '#D0D0D0',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     marginRight: 12,
-    marginBottom: 4,
-    backgroundColor: '#fff',
+    marginBottom: 6,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   radioButtonSelected: {
     borderColor: theme.appColors.primary,
-    backgroundColor: '#e6f0ff',
+    backgroundColor: '#E8F4FD',
+    borderWidth: 2,
+    shadowOpacity: 0.12,
+    elevation: 2,
   },
   radioLabel: {
     color: theme.appColors.text,
     fontWeight: '700',
     fontSize: 15,
   },
-  saveBar: { position: 'absolute', left: 12, right: 12, bottom: 12, alignItems: 'center' },
+  saveBar: { 
+    position: 'absolute', 
+    left: 14, 
+    right: 14, 
+    bottom: 14, 
+    alignItems: 'center',
+  },
   saveButton: {
     width: '100%',
-    borderRadius: 10,
+    borderRadius: 16,
     backgroundColor: theme.appColors.primary,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.appColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  sendButton: {
+    borderRadius: 16,
+    backgroundColor: '#2E7D32',
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  saveButtonText: {
-    color: '#fff',
+  sendButtonText: {
+    color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 17,
+    letterSpacing: 0.5,
   },
 });

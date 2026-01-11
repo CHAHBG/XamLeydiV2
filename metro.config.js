@@ -16,6 +16,10 @@ module.exports = (() => {
     path.resolve(__dirname, 'node_modules'),
     path.resolve(__dirname, 'prebuilt'),
   ];
+  
+  // Add .db files as supported asset extensions so prebuilt database can be bundled
+  config.resolver.assetExts = [...config.resolver.assetExts, 'db'];
+  
   // Do not block the `prebuilt` folder - it contains JSON assets the app imports.
   config.resolver.blockList = [
     /\.git\/.*/,

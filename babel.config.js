@@ -5,6 +5,15 @@ module.exports = function (api) {
     plugins: [
       // Add React Native Reanimated plugin for better performance
       'react-native-reanimated/plugin',
+      [
+        'module:react-native-dotenv',
+        {
+          moduleName: '@env',
+          path: '.env',
+          safe: false,
+          allowUndefined: true,
+        },
+      ],
       
       // Transform-remove-console plugin (optional for production builds)
       // process.env.NODE_ENV === 'production' && ['transform-remove-console'],
