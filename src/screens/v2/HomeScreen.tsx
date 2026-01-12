@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  Modal,
   RefreshControl,
   FlatList,
   Keyboard,
@@ -35,6 +36,7 @@ import DatabaseManager from '../../data/database';
 
 // Camera module compatibility
 const CameraModule: any = ExpoCamera as any;
+const CameraView: any = (CameraModule && (CameraModule.CameraView ?? CameraModule.Camera)) ?? null;
 const useCameraPermissionsHook: any =
   CameraModule && (CameraModule.useCameraPermissions ?? CameraModule.useCameraPermissions);
 
@@ -91,6 +93,10 @@ export default function HomeScreen() {
   const [recentComplaints, setRecentComplaints] = useState<RecentComplaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // QR scanner
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanned, setScanned] = useState(false);
 
   // Camera permission
   const [cameraPermission, requestCameraPermission] = useCameraPermissionsHook
@@ -234,7 +240,59 @@ export default function HomeScreen() {
     setSearchQuery('');
   }, [navigation]);
 
+  const extractSearchFromScan = useCallback((raw: string) => {
+    const data = String(raw ?? '').trim();
+    if (!data) return '';
+
+    // Handle URLs like https://.../?num_parcel=XXX
+    try {
+      if (data.startsWith('http://') || data.startsWith('https://')) {
+        const u = new URL(data);
+        const qp =
+          u.searchParams.get('num_parcel') ||
+          u.searchParams.get('numero_parcelle') ||
+          u.searchParams.get('parcel') ||
+          u.searchParams.get('parcelle') ||
+          u.searchParams.get('q');
+        if (qp) return decodeURIComponent(qp).trim();
+      }
+    } catch {
+      // ignore
+    }
+
+    // Handle simple key/value payloads: num_parcel=XXX
+    const m = data.match(/(?:num_parcel|numero_parcelle|parcel|parcelle)\s*[:=]\s*([^\s;,&]+)/i);
+    if (m?.[1]) return m[1].trim();
+
+    // Handle prefix payloads: PARCEL:XXX
+    const p = data.match(/^(?:parcel|parcelle|num_parcel)\s*[:#-]\s*(.+)$/i);
+    if (p?.[1]) return p[1].trim();
+
+    // Default: use entire scanned text
+    return data;
+  }, []);
+
+  const handleBarcodeScanned = useCallback(
+    ({ data }: { data: string }) => {
+      if (scanned) return;
+      setScanned(true);
+      setShowScanner(false);
+
+      const q = extractSearchFromScan(String(data ?? ''));
+      if (!q) return;
+
+      setSearchQuery(q);
+      setDisplayCount(10);
+      performSearch(q);
+    },
+    [extractSearchFromScan, performSearch, scanned]
+  );
+
   const handleQRScan = async () => {
+    if (!CameraView) {
+      Alert.alert('Scanner indisponible', "La caméra n'est pas disponible dans cette version.");
+      return;
+    }
     if (!cameraPermission) {
       Alert.alert('Erreur', "Impossible d'accéder à la caméra");
       return;
@@ -249,7 +307,10 @@ export default function HomeScreen() {
         return;
       }
     }
-    navigation.navigate('QRScanner');
+
+    Keyboard.dismiss();
+    setScanned(false);
+    setShowScanner(true);
   };
 
   const handleNewComplaint = () => {
@@ -609,6 +670,58 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <Modal
+          visible={showScanner}
+          animationType="slide"
+          onRequestClose={() => setShowScanner(false)}
+        >
+          <View style={styles.scannerContainer}>
+            <View style={styles.scannerHeader}>
+              <TouchableOpacity style={styles.scannerCloseBtn} onPress={() => setShowScanner(false)}>
+                <SafeIonicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.scannerTitle}>Scanner QR Code</Text>
+              <View style={styles.scannerHeaderSpacer} />
+            </View>
+
+            <View style={styles.cameraContainer}>
+              {cameraPermission?.granted && CameraView ? (
+                <CameraView
+                  style={StyleSheet.absoluteFillObject}
+                  facing="back"
+                  barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                  onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+                />
+              ) : (
+                <View style={styles.scannerPermissionFallback}>
+                  <Text style={styles.scannerPermissionText}>
+                    Permission caméra requise pour scanner.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.scannerPermissionBtn}
+                    onPress={async () => {
+                      const result = await requestCameraPermission();
+                      if (!result?.granted) {
+                        Alert.alert('Permission refusée', "Impossible d'ouvrir la caméra.");
+                      }
+                    }}
+                  >
+                    <Text style={styles.scannerPermissionBtnText}>Accorder</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View pointerEvents="none" style={styles.scannerOverlay}>
+                <View style={styles.scannerFrame} />
+                <Text style={styles.scannerInstructions}>Positionnez le QR code dans le cadre</Text>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -657,6 +770,80 @@ const createStyles = (theme: any, insets: any) =>
     },
     scrollContent: {
       paddingBottom: spacing['3xl'],
+    },
+    // QR Scanner
+    scannerContainer: {
+      flex: 1,
+      backgroundColor: '#000',
+    },
+    scannerHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: insets.top + spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.md,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+    },
+    scannerCloseBtn: {
+      padding: 8,
+      width: 44,
+      alignItems: 'flex-start',
+    },
+    scannerTitle: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: theme.typography.fontWeight.semiBold,
+    },
+    scannerHeaderSpacer: {
+      width: 44,
+    },
+    cameraContainer: {
+      flex: 1,
+      position: 'relative',
+    },
+    scannerOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.25)',
+    },
+    scannerFrame: {
+      width: 250,
+      height: 250,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: '#FFFFFF',
+      backgroundColor: 'transparent',
+    },
+    scannerInstructions: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      marginTop: 18,
+      textAlign: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    scannerPermissionFallback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    scannerPermissionText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
+    scannerPermissionBtn: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderRadius: radii.lg,
+      backgroundColor: theme.colors.primary,
+    },
+    scannerPermissionBtnText: {
+      color: '#FFFFFF',
+      fontWeight: theme.typography.fontWeight.semiBold,
     },
     searchSection: {
       paddingHorizontal: spacing.lg,
