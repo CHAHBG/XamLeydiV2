@@ -11,7 +11,7 @@ This project supports optional remote submission of complaints to a Supabase tab
 2) Local dev
 - Add a `.env` file at the repo root with the two variables. Example:
 
-  REACT_APP_SUPABASE_URL=https://uuobhwrfyyjcezpfeixl.supabase.co
+  REACT_APP_SUPABASE_URL=https://your-project.supabase.co
   REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJ...
 
 - Start the app with your environment variables available to Metro. Many dev setups automatically inject process.env.* when starting with `react-native start` or `expo start`.
@@ -28,4 +28,8 @@ This project supports optional remote submission of complaints to a Supabase tab
 - You can also manually send a complaint from the form ("Envoyer" button) or from the edit screen.
 
 5) Table schema
-- The app expects a `public.complaints` table with at least the columns used in the INSERT payload. A sample SQL is available in your earlier conversation logs. Ensure the table allows inserts from your anon key or use Row Level Security policies accordingly.
+- The app expects a `public.complaints` table with at least the columns used in the INSERT payload.
+- If present, the app will also populate the optional columns:
+  - `type_usage`
+  - `nature_parcelle`
+- Ensure the table allows inserts from your anon key or use Row Level Security policies accordingly.

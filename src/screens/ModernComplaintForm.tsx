@@ -44,6 +44,8 @@ interface ModernComplaintFormProps {
 
 type ComplaintFormState = Complaint & {
   parcelNumber: string;
+  typeUsage: string;
+  natureParcelle: string;
   date: string;
   activity: string;
   village: string;
@@ -65,6 +67,8 @@ export default function ModernComplaintForm({ route, navigation }: ModernComplai
   const [form, setForm] = useState<ComplaintFormState>({
     id: generateId(),
     parcelNumber: (route?.params?.parcelNumber ?? '') as string,
+    typeUsage: '',
+    natureParcelle: '',
     date: new Date().toISOString().slice(0, 10),
     activity: '',
     village: '',
@@ -83,6 +87,64 @@ export default function ModernComplaintForm({ route, navigation }: ModernComplai
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const extractParcelMeta = (row: any): { typeUsage?: string; natureParcelle?: string } => {
+    if (!row) return {};
+    let props: any = null;
+    try {
+      if (row.properties && typeof row.properties === 'string') props = JSON.parse(row.properties);
+      else if (row.properties && typeof row.properties === 'object') props = row.properties;
+    } catch {
+      props = null;
+    }
+
+    const pick = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        const v = obj?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    const typeUsage =
+      pick(row, ['type_usag', 'type_usage', 'type_usa', 'typeusage']) ||
+      pick(props, ['type_usag', 'type_usage', 'type_usa', 'typeusage', 'Type_usage']);
+    const natureParcelle =
+      pick(row, ['nature_parcelle', 'nature', 'nature_parc']) ||
+      pick(props, ['nature_parcelle', 'nature', 'nature_parc', 'Nature']);
+    return { typeUsage, natureParcelle };
+  };
+
+  const lastParcelLookupRef = React.useRef<string>('');
+  React.useEffect(() => {
+    const num = String(form.parcelNumber || '').trim();
+    if (!num || num === lastParcelLookupRef.current) return;
+    lastParcelLookupRef.current = num;
+
+    let cancelled = false;
+    const t = setTimeout(() => {
+      (async () => {
+        try {
+          const parcel = await DatabaseManager.getParcelByNum?.(num);
+          if (cancelled || !parcel) return;
+          const meta = extractParcelMeta(parcel);
+          if ((!meta.typeUsage && !meta.natureParcelle) || cancelled) return;
+          setForm((prev) => ({
+            ...prev,
+            typeUsage: prev.typeUsage || meta.typeUsage || '',
+            natureParcelle: prev.natureParcelle || meta.natureParcelle || '',
+          }));
+        } catch {
+          // ignore lookup failures
+        }
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [form.parcelNumber]);
 
   const handleChange = (key: keyof ComplaintFormState, value: string) => {
     setForm({ ...form, [key]: value });
@@ -178,6 +240,22 @@ export default function ModernComplaintForm({ route, navigation }: ModernComplai
         icon="map"
         error={errors.parcelNumber}
         placeholder="Ex: 0522010200001"
+      />
+
+      <EnhancedInput
+        label="Type d'usage (optionnel)"
+        value={form.typeUsage}
+        onChangeText={(text) => handleChange('typeUsage', text)}
+        icon="briefcase"
+        placeholder="Ex: Habitation / Agriculture"
+      />
+
+      <EnhancedInput
+        label="Nature de la parcelle (optionnel)"
+        value={form.natureParcelle}
+        onChangeText={(text) => handleChange('natureParcelle', text)}
+        icon="layers"
+        placeholder="Ex: Bâti / Non bâti"
       />
 
       <EnhancedInput

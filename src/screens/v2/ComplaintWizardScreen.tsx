@@ -82,6 +82,8 @@ interface ComplaintData {
   attachments: Attachment[];
   // DB columns
   parcelNumber: string;          // parcel_number
+  typeUsage: string;             // type_usage
+  natureParcelle: string;        // nature_parcelle
   date: string;                  // date
   activity: string;              // activity
   village: string;               // village
@@ -157,6 +159,8 @@ export default function ComplaintWizardScreen() {
     parcel: parcelParam || null,
     attachments: [],
     parcelNumber: parcelParam?.num_parcel || parcelParam?.parcel_number || parcelParam?.parcelNumber || parcelNumberParam || '',
+    typeUsage: '',
+    natureParcelle: '',
     date: new Date().toISOString().slice(0, 10),
     activity: '',
     village: parcelParam?.village || '',
@@ -181,6 +185,33 @@ export default function ComplaintWizardScreen() {
   if (!fuseRef.current) {
     fuseRef.current = new Fuse(VILLAGES, { includeScore: true, threshold: 0.4, keys: [] as any });
   }
+
+  const extractParcelMeta = (row: any): { typeUsage?: string; natureParcelle?: string } => {
+    if (!row) return {};
+    let props: any = null;
+    try {
+      if (row.properties && typeof row.properties === 'string') props = JSON.parse(row.properties);
+      else if (row.properties && typeof row.properties === 'object') props = row.properties;
+    } catch {
+      props = null;
+    }
+
+    const pick = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        const v = obj?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    const typeUsage =
+      pick(row, ['type_usag', 'type_usage', 'type_usa', 'typeusage']) ||
+      pick(props, ['type_usag', 'type_usage', 'type_usa', 'typeusage', 'Type_usage']);
+    const natureParcelle =
+      pick(row, ['nature_parcelle', 'nature', 'nature_parc']) ||
+      pick(props, ['nature_parcelle', 'nature', 'nature_parc', 'Nature']);
+    return { typeUsage, natureParcelle };
+  };
 
   // Step 1: Parcel search
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,7 +258,7 @@ export default function ComplaintWizardScreen() {
     }
   }, [searchQuery]);
 
-  const selectParcel = (parcel: SelectedParcel) => {
+  const selectParcel = async (parcel: SelectedParcel) => {
     // Extract parcel number from all possible locations
     const p = parcel as any;
     const parcelNum =
@@ -248,9 +279,57 @@ export default function ComplaintWizardScreen() {
       parcelNumber: parcelNumStr,
       village: parcel.village || p?.Village || p?.properties?.Village || prev.village,
     }));
+
+    // Best-effort: auto-fill typeUsage/natureParcelle from the full parcel row.
+    try {
+      const full = await DatabaseManager.getParcelById?.(parcel.id);
+      const meta = extractParcelMeta(full);
+      if (meta.typeUsage || meta.natureParcelle) {
+        setComplaintData((prev) => ({
+          ...prev,
+          typeUsage: prev.typeUsage || meta.typeUsage || '',
+          natureParcelle: prev.natureParcelle || meta.natureParcelle || '',
+        }));
+      }
+    } catch {
+      // ignore
+    }
+
     setSearchResults([]);
     setSearchQuery('');
   };
+
+  // If user types a parcel number without selecting a result, try auto-fill (best-effort).
+  const lastTypedLookupRef = useRef<string>('');
+  React.useEffect(() => {
+    const num = String(complaintData.parcelNumber || '').trim();
+    if (!num || complaintData.parcel || num === lastTypedLookupRef.current) return;
+    lastTypedLookupRef.current = num;
+
+    let cancelled = false;
+    const t = setTimeout(() => {
+      (async () => {
+        try {
+          const full = await DatabaseManager.getParcelByNum?.(num);
+          if (cancelled || !full) return;
+          const meta = extractParcelMeta(full);
+          if (!meta.typeUsage && !meta.natureParcelle) return;
+          setComplaintData((prev) => ({
+            ...prev,
+            typeUsage: prev.typeUsage || meta.typeUsage || '',
+            natureParcelle: prev.natureParcelle || meta.natureParcelle || '',
+          }));
+        } catch {
+          // ignore
+        }
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [complaintData.parcelNumber, complaintData.parcel]);
 
   const handleAddImage = async () => {
     try {
@@ -390,6 +469,8 @@ export default function ComplaintWizardScreen() {
         reference,
         // DB columns
         parcel_number: parcelNumberResolved,
+        type_usage: complaintData.typeUsage,
+        nature_parcelle: complaintData.natureParcelle,
         date: complaintData.date,
         activity: complaintData.activity,
         village: complaintData.village,
@@ -408,6 +489,8 @@ export default function ComplaintWizardScreen() {
         created_at: new Date().toISOString(),
         // Keep legacy/camelCase variants in JSON for UI compatibility
         parcelNumber: parcelNumberResolved,
+        typeUsage: complaintData.typeUsage,
+        natureParcelle: complaintData.natureParcelle,
         parcel: parcelToPersist,
         attachments: complaintData.attachments.map((a) => ({
           name: a.name,
@@ -568,6 +651,30 @@ export default function ComplaintWizardScreen() {
             ))}
           </>
         )}
+      </View>
+
+      {/* Type d'usage - Right after parcel selection */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Type d'usage</Text>
+        <TextInput
+          style={styles.textArea}
+          value={complaintData.typeUsage}
+          onChangeText={(text) => setComplaintData((prev) => ({ ...prev, typeUsage: text }))}
+          placeholder="Ex: Habitation / Agriculture"
+          placeholderTextColor={theme.colors.textTertiary}
+        />
+      </View>
+
+      {/* Nature de la parcelle - Right after type d'usage */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Nature de la parcelle</Text>
+        <TextInput
+          style={styles.textArea}
+          value={complaintData.natureParcelle}
+          onChangeText={(text) => setComplaintData((prev) => ({ ...prev, natureParcelle: text }))}
+          placeholder="Ex: Bâti / Non bâti"
+          placeholderTextColor={theme.colors.textTertiary}
+        />
       </View>
 
       {/* Village */}

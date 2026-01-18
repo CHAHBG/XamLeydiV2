@@ -215,6 +215,30 @@ export default function ComplaintEditScreen({ route: routeProp }: ComplaintEditS
             placeholder="Numéro de parcelle"
             placeholderTextColor={theme.colors.textTertiary}
           />
+
+          <Text style={styles.label}>Type d'usage</Text>
+          <TextInput
+            style={styles.input}
+            value={complaint.type_usage || complaint.typeUsage || ''}
+            onChangeText={(v) => {
+              updateField('type_usage', v);
+              updateField('typeUsage', v);
+            }}
+            placeholder="Type d'usage"
+            placeholderTextColor={theme.colors.textTertiary}
+          />
+
+          <Text style={styles.label}>Nature de la parcelle</Text>
+          <TextInput
+            style={styles.input}
+            value={complaint.nature_parcelle || complaint.natureParcelle || ''}
+            onChangeText={(v) => {
+              updateField('nature_parcelle', v);
+              updateField('natureParcelle', v);
+            }}
+            placeholder="Nature de la parcelle"
+            placeholderTextColor={theme.colors.textTertiary}
+          />
         </View>
 
         {/* Plaignant */}

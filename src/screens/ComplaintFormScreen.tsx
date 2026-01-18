@@ -47,6 +47,8 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
   const [form, setForm] = useState({
     id: generateId(),
     parcelNumber: (route?.params?.parcelNumber ?? '') as string,
+    typeUsage: '',
+    natureParcelle: '',
     date: new Date().toISOString().slice(0, 10),
     activity: '',
     village: '',
@@ -111,6 +113,65 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
     setForm({ ...form, [key]: value });
   };
 
+  const extractParcelMeta = (row: any): { typeUsage?: string; natureParcelle?: string } => {
+    if (!row) return {};
+    let props: any = null;
+    try {
+      if (row.properties && typeof row.properties === 'string') props = JSON.parse(row.properties);
+      else if (row.properties && typeof row.properties === 'object') props = row.properties;
+    } catch {
+      props = null;
+    }
+
+    const pick = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        const v = obj?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    const typeUsage =
+      pick(row, ['type_usag', 'type_usage', 'type_usa', 'typeusage']) ||
+      pick(props, ['type_usag', 'type_usage', 'type_usa', 'typeusage', 'Type_usage']);
+    const natureParcelle =
+      pick(row, ['nature_parcelle', 'nature', 'nature_parc']) ||
+      pick(props, ['nature_parcelle', 'nature', 'nature_parc', 'Nature']);
+    return { typeUsage, natureParcelle };
+  };
+
+  // Auto-fill typeUsage/natureParcelle from the parcel record when parcelNumber changes.
+  const lastParcelLookupRef = React.useRef<string>('');
+  React.useEffect(() => {
+    const num = String(form.parcelNumber || '').trim();
+    if (!num || num === lastParcelLookupRef.current) return;
+    lastParcelLookupRef.current = num;
+
+    let cancelled = false;
+    const t = setTimeout(() => {
+      (async () => {
+        try {
+          const parcel = await DatabaseManager.getParcelByNum?.(num);
+          if (cancelled || !parcel) return;
+          const meta = extractParcelMeta(parcel);
+          if ((!meta.typeUsage && !meta.natureParcelle) || cancelled) return;
+          setForm((prev: any) => ({
+            ...prev,
+            typeUsage: prev.typeUsage || meta.typeUsage || '',
+            natureParcelle: prev.natureParcelle || meta.natureParcelle || '',
+          }));
+        } catch {
+          // ignore lookup failures; complaint can still be submitted
+        }
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [form.parcelNumber]);
+
   // permission is handled via resolved hook above
   const handleStartScan = async () => {
     try {
@@ -128,7 +189,7 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
   };
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
-    setForm({ ...form, parcelNumber: data });
+    handleChange('parcelNumber', data);
     setIsScannerOpen(false);
     Alert.alert('QR Code scanné', `Numéro de parcelle: ${data}`);
   };
@@ -331,6 +392,20 @@ export default function ComplaintFormScreen({ route, navigation }: ComplaintForm
             onChangeText={(v: string) => handleChange('activity', v)}
             style={styles.input}
             placeholder="Activité"
+            placeholderTextColor={theme.appColors.subtext}
+          />
+          <TextInput
+            value={(form as any).typeUsage || ''}
+            onChangeText={(v: string) => handleChange('typeUsage' as any, v)}
+            style={styles.input}
+            placeholder="Type d'usage (optionnel)"
+            placeholderTextColor={theme.appColors.subtext}
+          />
+          <TextInput
+            value={(form as any).natureParcelle || ''}
+            onChangeText={(v: string) => handleChange('natureParcelle' as any, v)}
+            style={styles.input}
+            placeholder="Nature de la parcelle (optionnel)"
             placeholderTextColor={theme.appColors.subtext}
           />
         </View>

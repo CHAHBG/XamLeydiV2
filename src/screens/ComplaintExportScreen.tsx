@@ -115,10 +115,30 @@ export default function ComplaintExportScreen() {
           await FileSystem.writeAsStringAsync(fileUri, data, { encoding: FS.EncodingType.UTF8 });
         }
       } else {
-        // No folder selected: save to cache and offer to share
-        const base = FS.cacheDirectory || FS.documentDirectory;
-        fileUri = (base ?? FS.cacheDirectory) + exportFilename;
-        await FileSystem.writeAsStringAsync(fileUri, data, { encoding: FS.EncodingType.UTF8 });
+        // No folder selected: save to cache/documents and offer to share
+        // iOS: Use documentDirectory (files app accessible), Android: use cacheDirectory
+        const base = Platform.OS === 'ios' 
+          ? FS.documentDirectory 
+          : (FS.cacheDirectory || FS.documentDirectory);
+        
+        if (!base) {
+          Alert.alert('Erreur', 'Impossible de déterminer le répertoire de stockage');
+          setExporting(false);
+          return;
+        }
+        
+        fileUri = base + exportFilename;
+        console.log('[Export] Writing to:', fileUri);
+        
+        try {
+          await FileSystem.writeAsStringAsync(fileUri, data, { encoding: FS.EncodingType.UTF8 });
+          console.log('[Export] File written successfully');
+        } catch (writeErr) {
+          console.error('[Export] Write failed:', writeErr);
+          Alert.alert('Erreur', `Échec de l'écriture du fichier: ${String(writeErr)}`);
+          setExporting(false);
+          return;
+        }
         
         // Check if sharing is available and offer to share
         const isSharingAvailable = await Sharing.isAvailableAsync();

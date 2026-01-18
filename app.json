@@ -8,17 +8,30 @@
       "prebuilt/*",
       "assets/*"
     ],
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Autoriser XamLeydi à accéder à la caméra pour scanner les QR codes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autoriser XamLeydi à accéder à vos photos pour joindre une image à une réclamation.",
+          "cameraPermission": "Autoriser XamLeydi à accéder à la caméra pour prendre une photo à joindre à une réclamation."
+        }
+      ]
+    ],
     "android": {
       "package": "com.cabgn.XamLeydi",
       "adaptiveIcon": {
         "foregroundImage": "./assets/xamleydi-icon-v2.png",
         "backgroundColor": "#FFFFFF"
-      }
-      ,
+      },
+      "permissions": ["CAMERA"],
       "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
-        }
+        "googleMaps": {}
       }
     },
     "web": {
@@ -28,6 +41,14 @@
     "extra": {
       "eas": {
         "projectId": "e9f527f8-4f75-4eff-b43d-2c5d5117ad7a"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.cabgn.XamLeydi",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cette application a besoin de la caméra pour scanner les QR codes des parcelles.",
+        "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à vos photos pour joindre une image à une réclamation.",
+        "NSPhotoLibraryAddUsageDescription": "Cette application peut enregistrer une image dans votre photothèque si vous le demandez."
       }
     }
   }

@@ -15,7 +15,7 @@ import {
   FlatList,
   InteractionManager,
 } from 'react-native';
-import MapView, { Polygon, Marker } from 'react-native-maps';
+import MapView, { Polygon, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Card, Divider } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeIonicons } from '../components/SafeIcons';
@@ -28,6 +28,8 @@ import MapControls from '../ui/molecules/MapControls';
 
 // Use useWindowDimensions for better responsiveness
 const { width: screenWidth } = Dimensions.get('window');
+
+const mapProvider = Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined;
 
 // Simple error boundary
 class ParcelDetailErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
@@ -1215,7 +1217,7 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
                       style={styles.map}
                       initialRegion={mapRegion}
                       onMapReady={onMapReady}
-                      provider="google"
+                      provider={mapProvider as any}
                       mapType="hybrid"
                       zoomEnabled
                       pitchEnabled

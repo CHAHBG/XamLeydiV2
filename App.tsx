@@ -42,7 +42,7 @@ import ComplaintExportScreen from './src/screens/ComplaintExportScreen';
 import ComplaintEditScreenLegacy from './src/screens/ComplaintEditScreen';
 // DebugScreen removed in production builds
 import DatabaseManager from './src/data/database';
-import { REACT_APP_SUPABASE_URL, REACT_APP_SUPABASE_ANON_KEY } from '@env';
+import Constants from 'expo-constants';
 import { Asset } from 'expo-asset';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,11 +146,26 @@ function AppContent() {
   // Configure Supabase client for remote submission if environment vars are present
   useEffect(() => {
     try {
-      const url = REACT_APP_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || (global as any).REACT_APP_SUPABASE_URL || null;
-      const key = REACT_APP_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || (global as any).REACT_APP_SUPABASE_ANON_KEY || null;
+      // Try multiple sources for env vars (Expo Constants, process.env, global)
+      const extra = Constants.expoConfig?.extra || {};
+      const url = extra.REACT_APP_SUPABASE_URL 
+        || process.env.REACT_APP_SUPABASE_URL 
+        || (global as any).REACT_APP_SUPABASE_URL 
+        || null;
+      const key = extra.REACT_APP_SUPABASE_ANON_KEY 
+        || process.env.REACT_APP_SUPABASE_ANON_KEY 
+        || (global as any).REACT_APP_SUPABASE_ANON_KEY 
+        || null;
+      
+      console.log('[Supabase] Config check:', { 
+        hasUrl: !!url, 
+        hasKey: !!key,
+        urlPrefix: url ? url.substring(0, 20) + '...' : 'none'
+      });
+      
       DatabaseManager.setSupabaseConfig(url, key);
     } catch (e) {
-      console.warn('Failed to set Supabase config from env', e);
+      console.warn('[Supabase] Failed to set config from env:', e);
     }
   }, []);
 

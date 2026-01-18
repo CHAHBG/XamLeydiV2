@@ -59,6 +59,8 @@ export interface SearchResult {
 export interface Complaint {
   id: string;
   parcelNumber?: string;
+  typeUsage?: string;
+  natureParcelle?: string;
   date?: string; // ISO yyyy-mm-dd
   activity?: string;
   commune?: string;

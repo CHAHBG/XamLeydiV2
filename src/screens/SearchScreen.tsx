@@ -390,8 +390,36 @@ const SearchScreen = ({ navigation }: any) => {
     return type === 'individuel' ? '#2196F3' : '#4CAF50';
   };
 
+  const extractSearchFromScan = useCallback((raw: string) => {
+    const data = String(raw ?? '').trim();
+    if (!data) return '';
+    try {
+      if (/^https?:\/\//i.test(data)) {
+        const u = new URL(data);
+        const qp =
+          u.searchParams.get('num_parcel') ||
+          u.searchParams.get('numero_parcelle') ||
+          u.searchParams.get('parcel') ||
+          u.searchParams.get('parcelle') ||
+          u.searchParams.get('q');
+        if (qp) return decodeURIComponent(qp).trim();
+      }
+    } catch {
+      // ignore
+    }
+    const m = data.match(/(?:num_parcel|numero_parcelle|parcel|parcelle)\s*[:=]\s*([^\s;,&]+)/i);
+    if (m?.[1]) return m[1].trim();
+    const p = data.match(/^(?:parcel|parcelle|num_parcel)\s*[:#-]\s*(.+)$/i);
+    if (p?.[1]) return p[1].trim();
+    return data;
+  }, []);
+
   // QR Code scanning handlers
   const handleQRScanPress = () => {
+    if (!CameraView) {
+      Alert.alert('Scanner indisponible', "La caméra n'est pas disponible dans cette version.");
+      return;
+    }
     if (!permission) {
       Alert.alert('Permission', 'Demande de permission pour la caméra...');
       return;
@@ -417,8 +445,9 @@ const SearchScreen = ({ navigation }: any) => {
     setShowScanner(false);
 
     // Process the scanned data
-    setSearchQuery(data);
-    handleSearch(data);
+    const q = extractSearchFromScan(String(data ?? ''));
+    setSearchQuery(q);
+    handleSearch(q);
 
     Alert.alert(
       'QR Code scanné',
@@ -444,7 +473,7 @@ const SearchScreen = ({ navigation }: any) => {
             <View style={styles.placeholder} />
           </View>
 
-              {showScanner && (
+      			  {showScanner && CameraView ? (
             <View style={styles.cameraContainer}>
               <CameraView
                 style={StyleSheet.absoluteFillObject}
@@ -460,6 +489,12 @@ const SearchScreen = ({ navigation }: any) => {
                   Positionnez le QR code dans le cadre
                 </Text>
               </View>
+            </View>
+		  ) : (
+            <View style={[styles.cameraContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: 'white', padding: 16, textAlign: 'center' }}>
+                Caméra indisponible sur cet appareil / build.
+              </Text>
             </View>
           )}
         </View>

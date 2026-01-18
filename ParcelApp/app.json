@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.xamleydi.parcelapp",
       "config": {
-        "googleMapsApiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
+        "googleMapsApiKey": "${GOOGLE_MAPS_API_KEY}"
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -32,7 +32,7 @@
       "package": "com.xamleydi.parcelapp",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyAjEKwaoCI7XuVrgQdvBqOdJOgEc94Xezc"
+          "apiKey": "${GOOGLE_MAPS_API_KEY}"
         }
       },
       "permissions": [

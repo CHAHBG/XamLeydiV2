@@ -13,7 +13,7 @@ import {
   SafeAreaView,
   InteractionManager,
 } from 'react-native';
-import MapView, { Polygon, Marker } from 'react-native-maps';
+import MapView, { Polygon, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeIonicons } from '../components/SafeIcons';
@@ -532,7 +532,7 @@ export default function ModernParcelDetailScreen({ route, navigation, dbReady: p
               style={styles.map}
               initialRegion={mapRegion}
               onMapReady={onMapReady}
-              provider="google"
+              provider={(Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined) as any}
               mapType="hybrid"
               zoomEnabled
               pitchEnabled

@@ -1696,6 +1696,8 @@ class DatabaseManager {
       const payloadBase: any = {
         // Support both v2 (snake_case) and legacy (camelCase) shapes
         parcel_number: parcelNumber,
+        type_usage: current.type_usage || current.typeUsage || current.type_usag || null,
+        nature_parcelle: current.nature_parcelle || current.natureParcelle || current.nature || null,
         date: current.date || null,
         activity: current.activity || null,
         commune: current.commune || null,
@@ -2202,6 +2204,10 @@ class DatabaseManager {
       const translations: Record<string, string> = {
         id: 'id',
         parcelNumber: 'numero_parcelle',
+        typeUsage: 'type_usage',
+        natureParcelle: 'nature_parcelle',
+        type_usage: 'type_usage',
+        nature_parcelle: 'nature_parcelle',
         date: 'date',
         activity: 'activite',
         commune: 'commune',

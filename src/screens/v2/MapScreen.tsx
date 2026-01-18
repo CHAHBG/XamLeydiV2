@@ -15,6 +15,7 @@ import {
   PanResponder,
   Keyboard,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -99,6 +100,8 @@ export default function MapScreen() {
   const lastGestureY = useRef(SNAP_POINTS.CLOSED);
 
   const styles = useMemo(() => createStyles(theme, insets), [theme, insets]);
+
+  const mapProvider = Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined;
 
   const isFiniteNumber = (v: unknown): v is number =>
     typeof v === 'number' && Number.isFinite(v);
@@ -665,7 +668,7 @@ export default function MapScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
+        provider={mapProvider as any}
         initialRegion={INITIAL_REGION}
         showsUserLocation
         showsMyLocationButton={false}

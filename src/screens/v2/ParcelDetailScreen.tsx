@@ -100,6 +100,8 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
   const mapRef = useRef<any>(null);
   const centroidRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
+  const mapProvider = Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined;
+
   const styles = useMemo(() => createStyles(theme, insets), [theme, insets]);
 
   // Normalize properties
@@ -388,7 +390,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
             <MapView
               ref={mapRef}
               style={styles.map}
-              provider={PROVIDER_GOOGLE}
+              provider={mapProvider as any}
               mapType={mapType}
               initialRegion={mapRegion}
               onMapReady={onMapReady}

@@ -28,6 +28,16 @@ Desktop.ini
 .env.*
 !.env.example
 
+# Secrets / credentials
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+android/app/debug.keystore
+
 # Editor / IDE
 .vscode/
 .idea/
