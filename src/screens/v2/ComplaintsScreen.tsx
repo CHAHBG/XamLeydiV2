@@ -208,25 +208,42 @@ export default function ComplaintsScreen() {
           onPress: async () => {
             let successCount = 0;
             let failCount = 0;
+            const failSamples: string[] = [];
             
             try {
               for (const complaint of unsyncedComplaints) {
                 try {
                   // Call actual remote sync
-                  await DatabaseManager.sendComplaint?.(complaint.id);
-                  successCount++;
+                  const resp: any = await DatabaseManager.sendComplaint?.(complaint.id);
+                  if (resp && resp.sent === true) {
+                    successCount++;
+                  } else {
+                    failCount++;
+                    const why = resp?.resp ? String(resp.resp) : 'unknown_error';
+                    if (failSamples.length < 3) {
+                      failSamples.push(`${complaint.reference || complaint.id}: ${why}`);
+                    }
+                  }
                 } catch (err) {
                   console.warn('Failed to sync complaint:', complaint.id, err);
                   failCount++;
+                  if (failSamples.length < 3) {
+                    const msg = (err as any)?.message ? String((err as any).message) : String(err);
+                    failSamples.push(`${complaint.reference || complaint.id}: ${msg}`);
+                  }
                 }
               }
               
               if (failCount === 0) {
                 Alert.alert('Succès', `${successCount} plainte(s) synchronisée(s) avec succès.`);
               } else {
+                const details = failSamples.length ? `\n\nExemples:\n- ${failSamples.join('\n- ')}` : '';
+                const hint = failSamples.some((s) => s.includes('supabase_not_configured'))
+                  ? `\n\nSupabase n'est pas configuré sur cet appareil (URL/clé).`
+                  : '';
                 Alert.alert(
                   'Synchronisation partielle',
-                  `${successCount} réussie(s), ${failCount} échec(s). Vérifiez votre connexion.`
+                  `${successCount} réussie(s), ${failCount} échec(s).${hint}${details}`
                 );
               }
               
@@ -319,6 +336,7 @@ export default function ComplaintsScreen() {
         // CSV export with all fields
         const headers = [
           'ID', 'Référence', 'Type', 'Statut', 'Parcelle', 'Village', 'Commune',
+          'Type usage', 'Nature parcelle',
           'Plaignant', 'Sexe', 'ID Plaignant', 'Contact', 'Catégorie',
           'Mode réception', 'Motif', 'Description', 'Résolution attendue', 'Fonction', 'Date'
         ];
@@ -330,6 +348,8 @@ export default function ComplaintsScreen() {
           c.parcel_number || '',
           c.village || '',
           c.commune || '',
+          ((c as any).type_usage || (c as any).typeUsage || ''),
+          ((c as any).nature_parcelle || (c as any).natureParcelle || ''),
           c.complainant_name || '',
           c.complainant_sex || '',
           c.complainant_id || '',
@@ -346,7 +366,12 @@ export default function ComplaintsScreen() {
       } else {
         filename = `${exportFilename}.json`;
         // JSON export
-        content = JSON.stringify(toExport, null, 2);
+        const normalized = toExport.map((c: any) => ({
+          ...c,
+          type_usage: c.type_usage || c.typeUsage || null,
+          nature_parcelle: c.nature_parcelle || c.natureParcelle || null,
+        }));
+        content = JSON.stringify(normalized, null, 2);
       }
 
       let file: File;

@@ -147,15 +147,31 @@ function AppContent() {
   useEffect(() => {
     try {
       // Try multiple sources for env vars (Expo Constants, process.env, global)
-      const extra = Constants.expoConfig?.extra || {};
-      const url = extra.REACT_APP_SUPABASE_URL 
-        || process.env.REACT_APP_SUPABASE_URL 
-        || (global as any).REACT_APP_SUPABASE_URL 
-        || null;
-      const key = extra.REACT_APP_SUPABASE_ANON_KEY 
-        || process.env.REACT_APP_SUPABASE_ANON_KEY 
-        || (global as any).REACT_APP_SUPABASE_ANON_KEY 
-        || null;
+      // - `extra` is baked at build time via app.config.js
+      // - `EXPO_PUBLIC_*` can be inlined at bundle time in Expo
+      const extra =
+        (Constants.expoConfig as any)?.extra ||
+        (Constants as any).manifest?.extra ||
+        (Constants as any).manifest2?.extra ||
+        {};
+
+      const url =
+        extra.REACT_APP_SUPABASE_URL ||
+        extra.EXPO_PUBLIC_SUPABASE_URL ||
+        (process.env as any).EXPO_PUBLIC_SUPABASE_URL ||
+        (process.env as any).REACT_APP_SUPABASE_URL ||
+        (global as any).EXPO_PUBLIC_SUPABASE_URL ||
+        (global as any).REACT_APP_SUPABASE_URL ||
+        null;
+
+      const key =
+        extra.REACT_APP_SUPABASE_ANON_KEY ||
+        extra.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+        (process.env as any).EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+        (process.env as any).REACT_APP_SUPABASE_ANON_KEY ||
+        (global as any).EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+        (global as any).REACT_APP_SUPABASE_ANON_KEY ||
+        null;
       
       console.log('[Supabase] Config check:', { 
         hasUrl: !!url, 

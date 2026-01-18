@@ -26,6 +26,8 @@ export default ({ config }) => {
   config.extra = config.extra ?? {};
   config.extra.REACT_APP_SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || null;
   config.extra.REACT_APP_SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || null;
+  config.extra.EXPO_PUBLIC_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || null;
+  config.extra.EXPO_PUBLIC_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || null;
 
   return config;
 };

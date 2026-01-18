@@ -45,6 +45,7 @@ class DatabaseManager {
   try {
       if (!url || !anonKey) {
         console.warn('setSupabaseConfig called with empty url or anonKey, supabase disabled');
+        this.stopRetryScheduler();
         this.supabase = null;
         return;
       }
@@ -2196,6 +2197,10 @@ class DatabaseManager {
       items.forEach((item: any) => {
         Object.keys(item).forEach(k => allKeys.add(k));
       });
+
+      // Ensure newly-added columns are always present in the export headers
+      // even if some complaints were created before the fields existed.
+      ['type_usage', 'nature_parcelle', 'typeUsage', 'natureParcelle'].forEach((k) => allKeys.add(k));
 
       // Preferred column ordering (if you want specific order, list keys here)
       const headerFields = Array.from(allKeys);
