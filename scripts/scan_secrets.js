@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 
@@ -61,8 +62,27 @@ function shouldIgnoreDir(name) {
 function shouldScanFile(filePath) {
   const base = path.basename(filePath);
   if (IGNORE_FILES.has(base)) return false;
+
+  // Never scan local env files (they are meant to be gitignored).
+  // We keep scanning `.env.example` so placeholder patterns can still be reviewed.
+  if (base === '.env') return false;
+  if (base.startsWith('.env.') && base !== '.env.example') return false;
+
   const ext = path.extname(filePath);
   return INCLUDE_EXT.has(ext);
+}
+
+function listGitTrackedFiles() {
+  try {
+    const out = execSync('git ls-files -z', {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const rel = out.toString('utf8').split('\0').filter(Boolean);
+    return rel.map((p) => path.join(root, p));
+  } catch {
+    return null;
+  }
 }
 
 function walk(dir, out) {
@@ -104,8 +124,13 @@ function scanFile(filePath) {
 }
 
 function main() {
-  const files = [];
-  walk(root, files);
+  // Prefer scanning only files tracked by git. This avoids false positives from
+  // local, gitignored files (e.g. `.env` containing real credentials).
+  const tracked = listGitTrackedFiles();
+  const files = tracked || [];
+  if (!tracked) {
+    walk(root, files);
+  }
 
   const results = [];
   for (const f of files) {

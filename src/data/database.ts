@@ -1727,31 +1727,32 @@ class DatabaseManager {
         // Insert: exclude id so backend generates it
         const insertPayload = { ...payloadBase, created_at: new Date().toISOString() };
         try { delete (insertPayload as any).id; } catch {}
-        resp = await this.supabase.from('complaints').insert([insertPayload]).select();
+        // IMPORTANT: Avoid `.select()` here.
+        // In many Supabase setups, RLS allows INSERT but denies SELECT.
+        // Calling `.select()` forces "return=representation" and can make the
+        // request fail even though the insert itself would be allowed.
+        resp = await this.supabase.from('complaints').insert([insertPayload]);
         if (resp?.error) {
           sent = false;
           const err = resp.error;
           respText = err.message || JSON.stringify(err);
         } else {
           sent = true;
-          // Read created id
+          // If the server returned data anyway, try to extract id.
           const created = Array.isArray(resp.data) ? resp.data[0] : resp.data;
           if (created?.id) newBackendId = String(created.id);
-          respText = JSON.stringify(resp.data || resp);
+          respText = JSON.stringify({ status: resp?.status, statusText: resp?.statusText } as any);
         }
       } else {
-        resp = await this.supabase.from('complaints').update(payloadBase).eq('id', backendId).select();
-        const updatedRows = Array.isArray(resp?.data) ? resp.data : (resp?.data ? [resp.data] : []);
+        // Same rationale as INSERT: avoid `.select()` to prevent RLS "SELECT denied" failures.
+        resp = await this.supabase.from('complaints').update(payloadBase).eq('id', backendId);
         if (resp?.error) {
           sent = false;
           const err = resp.error;
           respText = err.message || JSON.stringify(err);
-        } else if (!updatedRows || updatedRows.length === 0) {
-          sent = false;
-          respText = 'no_rows_updated';
         } else {
           sent = true;
-          respText = JSON.stringify(resp.data || resp);
+          respText = JSON.stringify({ status: resp?.status, statusText: resp?.statusText } as any);
         }
       }
 
@@ -1854,7 +1855,10 @@ class DatabaseManager {
         let parsed: any = null;
         try { parsed = (r && typeof (r as any).data === 'string') ? JSON.parse((r as any).data) : (r as any).data; } catch (e) { parsed = (r as any).data; }
         if (!parsed) continue;
-        if (parsed.sent_remote === true && (r as any).backend_id) continue;
+        // If a complaint is already marked as sent, do not retry.
+        // This prevents duplicate inserts when RLS blocks returning the created id
+        // (backend_id stays null even though the insert succeeded).
+        if (parsed.sent_remote === true) continue;
         attempted += 1;
         try {
           await this.tryRemoteSubmit(parsed);
