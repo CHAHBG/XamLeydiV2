@@ -4,6 +4,17 @@ export function normalizeProperties(raw: Record<string, any> | string | undefine
     try { return JSON.parse(raw) as Record<string, any>; } catch (e) { return {}; }
   })() : (raw || {});
 
+  const foldKey = (s: string) => {
+    // Lowercase + remove accents/diacritics + remove whitespace/punct for tolerant matching.
+    // Use explicit unicode range for RN compatibility.
+    return String(s)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9_]/g, '');
+  };
+
   // Build a cleaned view of properties where trailing _col / _COL suffixes are removed.
   // Keep the original `props` object intact and return it as `original` at the end so
   // callers that need raw data still have access. Use `propsToUse` for normalization logic.
@@ -174,20 +185,52 @@ export function normalizeProperties(raw: Record<string, any> | string | undefine
       if ((propsToUse as any)[v] !== undefined && (propsToUse as any)[v] !== null) return String((propsToUse as any)[v]).trim();
       if ((props as any)[v] !== undefined && (props as any)[v] !== null) return String((props as any)[v]).trim();
       // also check case-insensitive cleaned keys
-      const lower = v.toLowerCase();
+      const folded = foldKey(v);
       for (const k of Object.keys(propsToUse)) {
-        if (k.toLowerCase() === lower && (propsToUse as any)[k] !== undefined && (propsToUse as any)[k] !== null) return String((propsToUse as any)[k]).trim();
+        if (foldKey(k) === folded && (propsToUse as any)[k] !== undefined && (propsToUse as any)[k] !== null) return String((propsToUse as any)[k]).trim();
       }
       for (const k of Object.keys(props)) {
-        if (k.toLowerCase() === lower && (props as any)[k] !== undefined && (props as any)[k] !== null) return String((props as any)[k]).trim();
+        if (foldKey(k) === folded && (props as any)[k] !== undefined && (props as any)[k] !== null) return String((props as any)[k]).trim();
       }
     }
     return null;
   };
 
-  const canonicalRegion = pickProp(['Region', 'region', 'regionSene', 'regionsene', 'regionSenegal', 'region_senegal', 'regionSen', 'regionSen']);
-  const canonicalDepartment = pickProp(['Department', 'department', 'Departement', 'departement', 'departementSen', 'departmentSen', 'departement_senegal', 'arrondisse', 'arrondissement']);
-  const canonicalCommune = pickProp(['Commune', 'commune', 'communeSen', 'communesen', 'commune_sen', 'communeSenegal']);
+  const pickByHeuristic = (match: (foldedKey: string) => boolean) => {
+    for (const k of Object.keys(propsToUse)) {
+      const fk = foldKey(k);
+      if (!match(fk)) continue;
+      const v = (propsToUse as any)[k];
+      if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+    }
+    for (const k of Object.keys(props)) {
+      const fk = foldKey(k);
+      if (!match(fk)) continue;
+      const v = (props as any)[k];
+      if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+    }
+    return null;
+  };
+
+  const canonicalRegion =
+    pickProp(['regionSenegal', 'region_senegal', 'Region', 'region', 'région', 'regionSene', 'regionsene', 'regionSen', 'regionSen'])
+    || pickByHeuristic((k) => k.includes('region'));
+
+  const canonicalDepartment =
+    pickProp(['departmentSenegal', 'department_senegal', 'departementSenegal', 'departement_senegal', 'Department', 'department', 'Departement', 'departement', 'departementSen', 'departmentSen'])
+    || pickByHeuristic((k) => k.includes('depart'));
+
+  const canonicalArrondissement =
+    pickProp(['arrondissementSenegal', 'arrondissement_senegal', 'Arrondissement', 'arrondissement', 'arrond', 'arrondisse'])
+    || pickByHeuristic((k) => k.includes('arrond'));
+
+  const canonicalCommune =
+    pickProp(['communeSenegal', 'commune_senegal', 'Commune', 'commune', 'communeSen', 'communesen', 'commune_sen'])
+    || pickByHeuristic((k) => k.includes('commune'));
+
+  const canonicalGrappe =
+    pickProp(['grappeSenegal', 'grappe_senegal', 'Grappe', 'grappe', 'grappeSen', 'grappesen'])
+    || pickByHeuristic((k) => k.includes('grappe'));
 
   return {
     original: props,
@@ -201,6 +244,13 @@ export function normalizeProperties(raw: Record<string, any> | string | undefine
     Department: canonicalDepartment || null,
     commune: canonicalCommune || null,
     Commune: canonicalCommune || null,
+
+    // Also expose the app's canonical DB keys (used by other screens/components)
+    regionSenegal: canonicalRegion || null,
+    departmentSenegal: canonicalDepartment || null,
+    arrondissementSenegal: canonicalArrondissement || null,
+    communeSenegal: canonicalCommune || null,
+    grappeSenegal: canonicalGrappe || null,
   };
 }
 

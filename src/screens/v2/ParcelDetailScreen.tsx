@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { RootStackParamList } from '../../../App';
 import MapView, { Polygon, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeIonicons } from '../../components/SafeIcons';
 import { useDesignTheme } from '../../ui/ThemeContext';
@@ -68,7 +70,7 @@ function safeParseJSON<T = any>(raw: any): T | null {
 }
 
 export default function ParcelDetailScreen({ route }: { route?: any }) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useDesignTheme();
 
@@ -216,7 +218,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     const appleMapsUrl = `http://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
     const url = Platform.OS === 'ios' ? appleMapsUrl : googleMapsUrl;
-    Linking.openURL(url).catch(() => Linking.openURL(googleMapsUrl).catch(() => {}));
+    Linking.openURL(url).catch(() => Linking.openURL(googleMapsUrl).catch(() => { }));
   };
 
   const toggleMapType = () => {
@@ -230,12 +232,12 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
   const loadNeighborParcels = useCallback(async () => {
     const parcelNum = parcel?.num_parcel || propsObj?.Num_parcel;
     if (!parcelNum) return;
-    
+
     setLoadingNeighbors(true);
     try {
       // Try getNeighborParcels first (spatial query)
       let neighbors = await DatabaseManager.getNeighborParcels?.(String(parcelNum)) || [];
-      
+
       // Fallback: If no neighbors found, try village-based query
       if ((!Array.isArray(neighbors) || neighbors.length === 0)) {
         const village = parcel?.village || propsObj?.Village || propsObj?.village || '';
@@ -243,7 +245,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
           try {
             const byVillage = await DatabaseManager.getParcelsByVillage?.(village) || [];
             // Filter out current parcel
-            neighbors = byVillage.filter((p: any) => 
+            neighbors = byVillage.filter((p: any) =>
               String(p?.num_parcel || p?.Num_parcel || p?.id) !== String(parcelNum)
             );
             // Limit to 10
@@ -253,10 +255,10 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
           }
         }
       }
-      
+
       if (neighbors && Array.isArray(neighbors)) {
         // Filter out current parcel
-        const filtered = neighbors.filter((n: any) => 
+        const filtered = neighbors.filter((n: any) =>
           n.num_parcel !== parcelNum && n.id !== parcel?.id
         );
         console.log('Loaded neighbors:', filtered.length);
@@ -286,7 +288,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
     if (typeof (navigation as any)?.push === 'function') {
       (navigation as any).push('ParcelDetail', params);
     } else {
-      navigation.navigate('ParcelDetail' as never, params as never);
+      navigation.navigate('ParcelDetail', params);
     }
   };
 
@@ -303,7 +305,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
       village,
       properties: propsObj,
     };
-    navigation.navigate('ComplaintWizard' as never, { parcel: parcelForWizard } as never);
+    navigation.navigate('ComplaintWizard', { parcel: parcelForWizard });
   };
 
   const onMapReady = useCallback(() => {
@@ -407,29 +409,29 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
                   strokeWidth={2}
                 />
               ))}
-              
+
               {/* Neighbor Parcels */}
               {showNeighbors && neighborParcels.map((neighbor, idx) => {
                 try {
                   // Try multiple sources for geometry
                   const rawGeom = neighbor.__parsedGeometry || neighbor.geometry || neighbor.geometry_string || neighbor.geom;
                   if (!rawGeom) return null;
-                  
-                  const geom = typeof rawGeom === 'string' 
-                    ? JSON.parse(rawGeom) 
+
+                  const geom = typeof rawGeom === 'string'
+                    ? JSON.parse(rawGeom)
                     : rawGeom;
                   if (!geom || !geom.coordinates) return null;
-                  
+
                   let coords: Array<{ latitude: number; longitude: number }> = [];
-                  
+
                   if (geom.type === 'Polygon' && Array.isArray(geom.coordinates[0])) {
                     coords = sanitizeCoords(geom.coordinates[0]);
                   } else if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates?.[0]?.[0])) {
                     coords = sanitizeCoords(geom.coordinates[0][0]);
                   }
-                  
+
                   if (coords.length === 0) return null;
-                  
+
                   return (
                     <Polygon
                       key={`neighbor-${idx}`}
@@ -446,7 +448,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
                   return null;
                 }
               })}
-              
+
               {centroidRef.current && (
                 <Marker
                   coordinate={centroidRef.current}
@@ -465,27 +467,27 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
               <TouchableOpacity style={styles.mapControlBtn} onPress={centerOnParcel}>
                 <SafeIonicons name="locate" size={20} color={theme.colors.text} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.mapControlBtn, mapType !== 'standard' && styles.mapControlBtnActive]} 
+              <TouchableOpacity
+                style={[styles.mapControlBtn, mapType !== 'standard' && styles.mapControlBtnActive]}
                 onPress={toggleMapType}
               >
-                <SafeIonicons 
-                  name={mapType === 'standard' ? 'globe-outline' : 'globe'} 
-                  size={20} 
-                  color={mapType !== 'standard' ? theme.colors.primary : theme.colors.text} 
+                <SafeIonicons
+                  name={mapType === 'standard' ? 'globe-outline' : 'globe'}
+                  size={20}
+                  color={mapType !== 'standard' ? theme.colors.primary : theme.colors.text}
                 />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.mapControlBtn, showNeighbors && styles.mapControlBtnActive]} 
+              <TouchableOpacity
+                style={[styles.mapControlBtn, showNeighbors && styles.mapControlBtnActive]}
                 onPress={toggleNeighbors}
               >
                 {loadingNeighbors ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                 ) : (
-                  <SafeIonicons 
-                    name="layers" 
-                    size={20} 
-                    color={showNeighbors ? theme.colors.primary : theme.colors.text} 
+                  <SafeIonicons
+                    name="layers"
+                    size={20}
+                    color={showNeighbors ? theme.colors.primary : theme.colors.text}
                   />
                 )}
               </TouchableOpacity>
@@ -493,7 +495,7 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
                 <SafeIonicons name="navigate" size={20} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
-            
+
             {/* Map Legend */}
             {showNeighbors && neighborParcels.length > 0 && (
               <View style={styles.mapLegend}>
@@ -575,11 +577,11 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
           {expandedSections.location && (
             <View style={styles.sectionContent}>
               {renderInfoRow('Village', propsObj?.Village || parcel?.village, 'home')}
-              {renderInfoRow('Commune', propsObj?.Commune || normalizedProps?.communeSenegal || propsObj?.communeSenegal, 'flag')}
-              {renderInfoRow('Arrondissement', normalizedProps?.arrondissementSenegal || propsObj?.Arrondissement || propsObj?.arrondissement, 'business')}
-              {renderInfoRow('Département', normalizedProps?.departmentSenegal || propsObj?.Departement || propsObj?.department || propsObj?.departement, 'business')}
-              {renderInfoRow('Région', normalizedProps?.regionSenegal || propsObj?.Region || propsObj?.region, 'map')}
-              {renderInfoRow('Grappe', normalizedProps?.grappeSenegal || propsObj?.Grappe || propsObj?.grappe, 'map')}
+              {renderInfoRow('Commune', normalizedProps?.communeSenegal || propsObj?.communeSenegal || propsObj?.Commune || propsObj?.commune, 'flag')}
+              {renderInfoRow('Arrondissement', normalizedProps?.arrondissementSenegal || propsObj?.arrondissementSenegal || propsObj?.Arrondissement || propsObj?.arrondissement, 'business')}
+              {renderInfoRow('Département', normalizedProps?.departmentSenegal || propsObj?.departmentSenegal || propsObj?.Departement || propsObj?.department || propsObj?.departement, 'business')}
+              {renderInfoRow('Région', normalizedProps?.regionSenegal || propsObj?.regionSenegal || propsObj?.Region || propsObj?.region || propsObj?.région, 'map')}
+              {renderInfoRow('Grappe', normalizedProps?.grappeSenegal || propsObj?.grappeSenegal || propsObj?.Grappe || propsObj?.grappe, 'map')}
             </View>
           )}
         </Card>
@@ -658,10 +660,10 @@ export default function ParcelDetailScreen({ route }: { route?: any }) {
             {neighborParcels.map((neighbor, idx) => {
               const neighborName = neighbor.parcel_type === 'individuel'
                 ? (neighbor.typ_pers === 'personne_morale'
-                    ? neighbor.denominat || 'Non spécifié'
-                    : `${neighbor.prenom || ''} ${neighbor.nom || ''}`.trim() || 'Non spécifié')
+                  ? neighbor.denominat || 'Non spécifié'
+                  : `${neighbor.prenom || ''} ${neighbor.nom || ''}`.trim() || 'Non spécifié')
                 : neighbor.denominat || `${neighbor.prenom_m || ''} ${neighbor.nom_m || ''}`.trim() || 'Non spécifié';
-              
+
               return (
                 <TouchableOpacity
                   key={neighbor.id || neighbor.num_parcel || `neighbor-${idx}`}

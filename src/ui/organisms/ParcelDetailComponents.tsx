@@ -177,7 +177,9 @@ export const MandataireInfo = ({
  * @param props.village - Optional village name where parcel is located
  * @param props.region - Optional administrative region
  * @param props.department - Optional department (administrative division)
+ * @param props.arrondissement - Optional arrondissement (sub-division)
  * @param props.commune - Optional commune (local administrative division)
+ * @param props.grappe - Optional grappe (cluster)
  * @param props.vocation - Optional purpose/use classification of the parcel
  * @param props.typeUsage - Optional specific usage type
  */
@@ -186,7 +188,9 @@ export const ParcelInfo = ({
   village,
   region,
   department,
+  arrondissement,
   commune,
+  grappe,
   vocation,
   typeUsage
 }: {
@@ -194,7 +198,9 @@ export const ParcelInfo = ({
   village?: string;
   region?: string;
   department?: string;
+  arrondissement?: string;
   commune?: string;
+  grappe?: string;
   vocation?: string;
   typeUsage?: string;
 }) => {
@@ -221,10 +227,20 @@ export const ParcelInfo = ({
           label="Département:" 
           value={department || 'Non disponible'} 
         />
+
+        <InfoItem 
+          label="Arrondissement:" 
+          value={arrondissement || 'Non disponible'} 
+        />
         
         <InfoItem 
           label="Commune:" 
           value={commune || 'Non disponible'} 
+        />
+
+        <InfoItem 
+          label="Grappe:" 
+          value={grappe || 'Non disponible'} 
         />
         
         <InfoItem 

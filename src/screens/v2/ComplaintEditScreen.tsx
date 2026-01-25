@@ -204,7 +204,7 @@ export default function ComplaintEditScreen({ route: routeProp }: ComplaintEditS
           <Text style={styles.label}>Numéro de parcelle</Text>
           <TextInput
             style={styles.input}
-            value={complaint.parcel_number || complaint.parcelNumber || complaint.num_parcel || complaint.numero_parcelle || ''}
+            value={complaint.parcel_number || complaint.parcelNumber || complaint.num_parcel || complaint.numero_parcelle || complaint.parcel?.num_parcel || complaint.parcel?.Num_parcel || complaint.parcel?.parcel_number || ''}
             onChangeText={(v) => {
               setComplaint((prev: any) => ({
                 ...prev,
@@ -285,7 +285,7 @@ export default function ComplaintEditScreen({ route: routeProp }: ComplaintEditS
                 style={[
                   styles.genderButtonText,
                   (complaint.complainant_sex || complaint.complainantSex) === 'M' &&
-                    styles.genderButtonTextActive,
+                  styles.genderButtonTextActive,
                 ]}
               >
                 Masculin
@@ -314,7 +314,7 @@ export default function ComplaintEditScreen({ route: routeProp }: ComplaintEditS
                 style={[
                   styles.genderButtonText,
                   (complaint.complainant_sex || complaint.complainantSex) === 'F' &&
-                    styles.genderButtonTextActive,
+                  styles.genderButtonTextActive,
                 ]}
               >
                 Féminin

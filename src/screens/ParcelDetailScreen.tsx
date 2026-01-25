@@ -948,7 +948,9 @@ const ParcelDetailScreen = ({ route, navigation, dbReady: parentDbReady }: any) 
           village={getValueOrFallback(props, 'Village')}
           region={getValueOrFallback(props, 'regionSenegal') || getValueOrFallback(props, 'Region') || getValueOrFallback(props, 'region')}
           department={getValueOrFallback(props, 'departmentSenegal') || getValueOrFallback(props, 'Department') || getValueOrFallback(props, 'department')}
+          arrondissement={getValueOrFallback(props, 'arrondissementSenegal') || getValueOrFallback(props, 'Arrondissement') || getValueOrFallback(props, 'arrondissement')}
           commune={getValueOrFallback(props, 'communeSenegal') || getValueOrFallback(props, 'Commune') || getValueOrFallback(props, 'commune')}
+          grappe={getValueOrFallback(props, 'grappeSenegal') || getValueOrFallback(props, 'Grappe') || getValueOrFallback(props, 'grappe')}
           vocation={getCanonicalValue(props, normalizedProps || props, 'Vocation')}
           typeUsage={getCanonicalValue(props, normalizedProps || props, 'type_usag')}
         />

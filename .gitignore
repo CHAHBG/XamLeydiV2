@@ -17,6 +17,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.log
+gradle_build_output*.txt
 
 # OS
 .DS_Store

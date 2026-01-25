@@ -74,7 +74,7 @@ class ErrorBoundary extends React.Component<any, { hasError: boolean }> {
   }
 }
 
-type RootStackParamList = {
+export type RootStackParamList = {
   Main: undefined;
   Search: undefined;
   ParcelDetail: { parcel: any }; // Replace 'any' with your actual parcel type if available
@@ -296,9 +296,7 @@ function AppContent() {
                     fontSize: 18,
                     color: '#FFFFFF',
                   },
-                  contentStyle: {
-                    backgroundColor: theme.colors.background,
-                  },
+                  // contentStyle is not a valid StackNavigationOptions prop; remove it
                 }}
               >
                 {/* Main Tab Navigator (v2 Design) */}

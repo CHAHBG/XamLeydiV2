@@ -1,8 +1,3 @@
-/**
- * XamLeydi v2.0 - Complaint Wizard
- * Multi-step form for submitting new complaints
- */
-
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
@@ -23,6 +18,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { RootStackParamList } from '../../../App';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeIonicons } from '../../components/SafeIcons';
@@ -103,7 +100,7 @@ interface ComplaintData {
 const TOTAL_STEPS = 4;
 
 export default function ComplaintWizardScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   // Get params from navigation state directly (pick the most recent ComplaintWizard route)
   const wizardRoute: any = navigation
     .getState()
@@ -177,7 +174,6 @@ export default function ComplaintWizardScreen() {
     complaintFunction: '',
   });
 
-  // Dropdowns and autocomplete
   const [communeMenuVisible, setCommuneMenuVisible] = useState(false);
   const [receptionMenuVisible, setReceptionMenuVisible] = useState(false);
   const [villageSuggestions, setVillageSuggestions] = useState<string[]>([]);
@@ -273,9 +269,9 @@ export default function ComplaintWizardScreen() {
       '';
     const parcelNumStr = String(parcelNum).trim();
 
-    setComplaintData((prev) => ({ 
-      ...prev, 
-      parcel, 
+    setComplaintData((prev) => ({
+      ...prev,
+      parcel,
       parcelNumber: parcelNumStr,
       village: parcel.village || p?.Village || p?.properties?.Village || prev.village,
     }));
@@ -410,8 +406,8 @@ export default function ComplaintWizardScreen() {
         return (complaintData.complainantName?.trim()?.length || 0) > 0;
       case 3:
         // Step 3: complaint details - reason OR description required
-        return ((complaintData.complaintReason?.trim()?.length || 0) > 0) || 
-               ((complaintData.complaintDescription?.trim()?.length || 0) > 0);
+        return ((complaintData.complaintReason?.trim()?.length || 0) > 0) ||
+          ((complaintData.complaintDescription?.trim()?.length || 0) > 0);
       case 4:
         // Step 4: summary - always can proceed to submit
         return true;
@@ -450,18 +446,19 @@ export default function ComplaintWizardScreen() {
       // If the user typed a numeric parcel id in the search field but didn't tap a result,
       // still persist it as parcel_number.
       const typedQuery = (searchQuery || '').trim();
-      const typedParcelNumber = /^\d{10,}$/.test(typedQuery) ? typedQuery : '';
+      // Accept any non-empty typed query as a parcel identifier fallback
+      const typedParcelNumber = typedQuery ? typedQuery : '';
       const parcelNumberResolved = resolveParcelNumber(complaintData) || typedParcelNumber || '';
 
       // Persist selected parcel info in the JSON payload (even though it's not a DB column)
       // so we can always recover/display num_parcel later.
       const parcelToPersist = complaintData.parcel
         ? {
-            id: complaintData.parcel.id,
-            num_parcel: (complaintData.parcel as any).num_parcel || (complaintData.parcel as any).Num_parcel || '',
-            owner_name: (complaintData.parcel as any).owner_name || (complaintData.parcel as any).ownerName || '',
-            village: (complaintData.parcel as any).village || (complaintData.parcel as any).Village || '',
-          }
+          id: complaintData.parcel.id,
+          num_parcel: (complaintData.parcel as any).num_parcel || (complaintData.parcel as any).Num_parcel || '',
+          owner_name: (complaintData.parcel as any).owner_name || (complaintData.parcel as any).ownerName || '',
+          village: (complaintData.parcel as any).village || (complaintData.parcel as any).Village || '',
+        }
         : null;
 
       // Build complaint object matching DB schema exactly
@@ -507,7 +504,8 @@ export default function ComplaintWizardScreen() {
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Plaintes'),
+            // Use a valid route name for complaints list; fallback to 'Main' if unsure
+            onPress: () => navigation.navigate('Main'),
           },
         ]
       );
@@ -605,15 +603,13 @@ export default function ComplaintWizardScreen() {
               value={searchQuery}
               onChangeText={(text) => {
                 setSearchQuery(text);
-                // If user types a numeric parcel id without selecting a result,
-                // keep it in complaintData so it appears in the summary.
+                // Keep the typed text as the parcel number when user hasn't selected a parcel.
                 const t = (text || '').trim();
-                const isNumericParcel = /^\d{10,}$/.test(t);
                 setComplaintData((prev) => {
                   if (prev.parcel) return prev;
                   return {
                     ...prev,
-                    parcelNumber: isNumericParcel ? t : '',
+                    parcelNumber: t,
                   };
                 });
               }}
@@ -656,25 +652,39 @@ export default function ComplaintWizardScreen() {
       {/* Type d'usage - Right after parcel selection */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Type d'usage</Text>
-        <TextInput
-          style={styles.textArea}
-          value={complaintData.typeUsage}
-          onChangeText={(text) => setComplaintData((prev) => ({ ...prev, typeUsage: text }))}
-          placeholder="Ex: Habitation / Agriculture"
-          placeholderTextColor={theme.colors.textTertiary}
-        />
+        <View style={styles.sexButtonRow}>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.typeUsage === 'Agricole' && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, typeUsage: 'Agricole' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.typeUsage === 'Agricole' && styles.sexButtonTextSelected]}>Agricole</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.typeUsage === 'Habitat' && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, typeUsage: 'Habitat' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.typeUsage === 'Habitat' && styles.sexButtonTextSelected]}>Habitat</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Nature de la parcelle - Right after type d'usage */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Nature de la parcelle</Text>
-        <TextInput
-          style={styles.textArea}
-          value={complaintData.natureParcelle}
-          onChangeText={(text) => setComplaintData((prev) => ({ ...prev, natureParcelle: text }))}
-          placeholder="Ex: Bâti / Non bâti"
-          placeholderTextColor={theme.colors.textTertiary}
-        />
+        <View style={styles.sexButtonRow}>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.natureParcelle === 'Individuelle' && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, natureParcelle: 'Individuelle' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.natureParcelle === 'Individuelle' && styles.sexButtonTextSelected]}>Individuelle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.natureParcelle === 'Collective' && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, natureParcelle: 'Collective' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.natureParcelle === 'Collective' && styles.sexButtonTextSelected]}>Collective</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Village */}
@@ -872,18 +882,20 @@ export default function ComplaintWizardScreen() {
       {/* Complaint Reason */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Motif de la plainte *</Text>
-        <TextInput
-          style={styles.textArea}
-          value={complaintData.complaintReason}
-          onChangeText={(text) =>
-            setComplaintData((prev) => ({ ...prev, complaintReason: text }))
-          }
-          placeholder="Décrivez brièvement le motif"
-          placeholderTextColor={theme.colors.textTertiary}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
+        <View style={styles.sexButtonRow}>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.complaintReason === 'Omission' && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, complaintReason: 'Omission' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.complaintReason === 'Omission' && styles.sexButtonTextSelected]}>Omission</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sexButton, complaintData.complaintReason === "erreur sur les données socio-foncieres" && styles.sexButtonSelected]}
+            onPress={() => setComplaintData((prev) => ({ ...prev, complaintReason: 'erreur sur les données socio-foncieres' }))}
+          >
+            <Text style={[styles.sexButtonText, complaintData.complaintReason === "erreur sur les données socio-foncieres" && styles.sexButtonTextSelected]}>erreur sur les données socio-foncieres</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Reception Mode Dropdown */}
@@ -1022,9 +1034,9 @@ export default function ComplaintWizardScreen() {
           <View style={styles.summarySection}>
             <Text style={styles.summaryLabel}>Catégorie</Text>
             <Text style={styles.summaryValue}>
-              {complaintData.complaintCategory === 'sensible' ? 'Sensible' : 
-               complaintData.complaintCategory === 'non_sensible' ? 'Non sensible' : 
-               'Non spécifiée'}
+              {complaintData.complaintCategory === 'sensible' ? 'Sensible' :
+                complaintData.complaintCategory === 'non_sensible' ? 'Non sensible' :
+                  'Non spécifiée'}
             </Text>
           </View>
 
@@ -1164,6 +1176,8 @@ export default function ComplaintWizardScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+
+
   );
 }
 
@@ -1257,9 +1271,6 @@ const createStyles = (theme: any, insets: any) =>
       color: theme.colors.primary,
       fontWeight: theme.typography.fontWeight.semiBold,
     },
-    keyboardView: {
-      flex: 1,
-    },
     stepContent: {
       flex: 1,
       padding: spacing.lg,
@@ -1319,35 +1330,8 @@ const createStyles = (theme: any, insets: any) =>
       color: theme.colors.textSecondary,
       marginTop: spacing.xs,
     },
-    typeGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginHorizontal: -spacing.xs,
-    },
-    typeCard: {
-      width: '48%',
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: radii.lg,
-      padding: spacing.md,
-      alignItems: 'center',
-      marginHorizontal: '1%',
-      marginBottom: spacing.sm,
-    },
-    typeCardSelected: {
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.primaryLight,
-    },
-    typeLabel: {
-      fontSize: theme.typography.fontSize.small,
-      color: theme.colors.textSecondary,
-      marginTop: spacing.sm,
-      textAlign: 'center',
-    },
-    typeLabelSelected: {
-      color: theme.colors.primary,
-      fontWeight: theme.typography.fontWeight.medium,
+    keyboardView: {
+      flex: 1,
     },
     textArea: {
       backgroundColor: theme.colors.surface,
@@ -1357,7 +1341,8 @@ const createStyles = (theme: any, insets: any) =>
       padding: spacing.md,
       fontSize: theme.typography.fontSize.body,
       color: theme.colors.text,
-      minHeight: 80,
+      minHeight: 100,
+      textAlignVertical: 'top',
     },
     charCount: {
       fontSize: theme.typography.fontSize.small,

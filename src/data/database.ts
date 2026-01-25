@@ -29,7 +29,7 @@ class DatabaseManager {
   private queryCache: Map<string, { timestamp: number, result: any }> = new Map();
   // In-memory map to track sends in progress per remote id (or local id)
   private sendingMap: Map<string, boolean> = new Map();
-  
+
   static getInstance(): DatabaseManager {
     if (!instance) {
       instance = new DatabaseManager();
@@ -42,7 +42,7 @@ class DatabaseManager {
    * with your Supabase URL and anon key. Does not throw on invalid input.
    */
   setSupabaseConfig(url: string | null | undefined, anonKey: string | null | undefined) {
-  try {
+    try {
       if (!url || !anonKey) {
         console.warn('setSupabaseConfig called with empty url or anonKey, supabase disabled');
         this.stopRetryScheduler();
@@ -74,7 +74,7 @@ class DatabaseManager {
    * Stop background retry if configured (call when disabling supabase)
    */
   private stopRetryScheduler() {
-  try {
+    try {
       if (this.retryIntervalId) {
         clearInterval(this.retryIntervalId);
         this.retryIntervalId = null;
@@ -97,10 +97,10 @@ class DatabaseManager {
   // Helper method to seed basic test data
   async seedTestData() {
     if (!this.db) return;
-    
+
     console.log("Seeding test data into database...");
-    
-  try {
+
+    try {
       // Create parcels table if it doesn't exist
       this.db.execSync(`
         CREATE TABLE IF NOT EXISTS parcels (
@@ -118,14 +118,14 @@ class DatabaseManager {
           properties TEXT
         )
       `);
-      
+
       // Check if the table already has data
       const countResult = this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels");
       const count = countResult ? (countResult as any).count : 0;
-      
+
       if (count === 0) {
         console.log("Parcels table is empty, inserting test data");
-        
+
         // Insert some test individual parcels
         this.db.execSync(`
           INSERT INTO parcels (num_parcel, parcel_type, typ_pers, prenom, nom, village, geometry, properties)
@@ -134,7 +134,7 @@ class DatabaseManager {
             ('050-IND-105', 'individuel', 'personne physique', 'Fatou', 'Sow', 'Village B', '{}', '{"regionSenegal":"Thiès", "departmentSenegal":"Thiès", "communeSenegal":"Thiès Ouest"}'),
             ('050-IND-205', 'individuel', 'personne physique', 'Amadou', 'Ba', 'Village C', '{}', '{"regionSenegal":"Saint-Louis", "departmentSenegal":"Saint-Louis", "communeSenegal":"Saint-Louis"}')
         `);
-        
+
         // Insert some test collective parcels
         this.db.execSync(`
           INSERT INTO parcels (num_parcel, parcel_type, typ_pers, prenom_m, nom_m, denominat, village, geometry, properties)
@@ -145,7 +145,7 @@ class DatabaseManager {
             ('050-COL-205', 'collectif', 'association', 'Aissatou', 'Diop', 'Association des femmes', 'Village E', '{}',
             '{"Prenom_M":"Aissatou", "Nom_M":"Diop", "regionSenegal":"Louga", "departmentSenegal":"Louga", "communeSenegal":"Louga", "Cas_de_Personne_001":"Présidente", "Quel_est_le_nombre_d_affectata":"15", "Prenom_001":"Mariama", "Nom_001":"Fall"}')
         `);
-        
+
         console.log("Test data inserted successfully");
       } else {
         console.log(`Parcels table already has ${count} rows, skipping test data insertion`);
@@ -159,11 +159,11 @@ class DatabaseManager {
     const dbName = 'parcelapp.db';
     const sqliteDir = `${FileSystem.documentDirectory}SQLite`;
     const dbDest = `${sqliteDir}/${dbName}`;
-    
+
     // Maximum number of initialization attempts
     const MAX_ATTEMPTS = 3;
     let attempts = 0;
-    
+
     while (attempts < MAX_ATTEMPTS) {
       attempts++;
       try {
@@ -177,23 +177,23 @@ class DatabaseManager {
           console.warn('Error creating SQLite directory:', dirError);
           // Try to continue anyway
         }
-        
+
         // Check if the database exists and compare with bundled version
         try {
           console.log('[DB DEBUG] Checking destination DB at', dbDest);
           console.log('[DB DEBUG] FileSystem.bundleDirectory=', FileSystem.bundleDirectory, 'documentDirectory=', FileSystem.documentDirectory);
-          
+
           // Get info about destination DB
           const info = await FileSystem.getInfoAsync(dbDest);
           const dbSize = ('size' in info) ? (info as any).size : 0;
           console.log('[DB DEBUG] dbDest exists?', info.exists, ' size=', dbSize);
-          
+
           // Get info about bundled DB to compare
           let bundledDbSize = 0;
           try {
             const assetPath = require('../../prebuilt/parcelapp.db');
             const asset = Asset.fromModule(assetPath);
-            await asset.downloadAsync().catch(() => {});
+            await asset.downloadAsync().catch(() => { });
             const source = asset.localUri || asset.uri;
             if (source) {
               const bundledInfo = await FileSystem.getInfoAsync(source);
@@ -203,7 +203,7 @@ class DatabaseManager {
           } catch (e) {
             console.warn('[DB DEBUG] Could not get bundled DB size:', e);
           }
-          
+
           // Copy prebuilt DB if:
           // 1) File doesn't exist
           // 2) File is too small (< 1MB likely means empty schema only)
@@ -215,7 +215,7 @@ class DatabaseManager {
 
           // Dev-only escape hatch: allow replacing when bundled DB clearly changed.
           const devBundleDiffers = isDev && bundledDbSize > 0 && Math.abs(dbSize - bundledDbSize) > 1024;
-          
+
           if (needsCopy || devBundleDiffers) {
             if (info.exists) {
               const reason = dbSize < 1024 * 1024
@@ -233,7 +233,7 @@ class DatabaseManager {
             try {
               // Try to copy bundled DB using both approaches
               let copied = false;
-              
+
               // First approach: Try using Asset to load the prebuilt database
               try {
                 console.log("Attempting to load prebuilt DB with Asset API...");
@@ -241,7 +241,7 @@ class DatabaseManager {
                 try {
                   const debugPath = `${FileSystem.documentDirectory}db_debug_paths.txt`;
                   const debugMsg = `[DB FILE DEBUG] Asset attempt: bundleDir=${FileSystem.bundleDirectory} docDir=${FileSystem.documentDirectory} dbDest=${dbDest}\n`;
-                  await FileSystem.writeAsStringAsync(debugPath, debugMsg, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => {});
+                  await FileSystem.writeAsStringAsync(debugPath, debugMsg, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { });
                 } catch (e) {
                   /* ignore debug-write failures */
                 }
@@ -252,12 +252,12 @@ class DatabaseManager {
                 await asset.downloadAsync().catch((e) => console.log("Asset download error:", e));
                 const source = asset.localUri || asset.uri;
                 console.log('[DB DEBUG] Asset source URI/localUri:', source);
-                
+
                 if (source) {
                   console.log("Asset found, copying from:", source, ' to:', dbDest);
                   await FileSystem.copyAsync({ from: source, to: dbDest })
                     .catch((e) => console.warn('Prebuilt DB copy failed (Asset method):', e));
-                  
+
                   const verifyInfo = await FileSystem.getInfoAsync(dbDest);
                   console.log('[DB DEBUG] post-asset copy dbDest exists?', verifyInfo.exists, ' size=', ('size' in verifyInfo) ? (verifyInfo as any).size : 0);
                   if (verifyInfo.exists && verifyInfo.size > 0) {
@@ -269,7 +269,7 @@ class DatabaseManager {
               } catch (assetError) {
                 console.warn('Asset approach failed:', assetError);
               }
-              
+
               // Second approach: Try direct filesystem if available
               if (!copied && FileSystem.documentDirectory) {
                 try {
@@ -278,32 +278,32 @@ class DatabaseManager {
                   if (Platform.OS === 'android') {
                     const bundledDbPath = `${FileSystem.bundleDirectory}prebuilt/parcelapp.db`;
                     const bundleInfo = await FileSystem.getInfoAsync(bundledDbPath);
-                    
-                      if (bundleInfo.exists) {
-                        console.log("Found DB in bundle at:", bundledDbPath);
-                        console.log('[DB DEBUG] Attempting copy from bundledDbPath to dbDest');
-                        await FileSystem.copyAsync({ from: bundledDbPath, to: dbDest });
-                      
-                        const verifyInfo = await FileSystem.getInfoAsync(dbDest);
-                        console.log('[DB DEBUG] post-bundle copy dbDest exists?', verifyInfo.exists, ' size=', ('size' in verifyInfo) ? (verifyInfo as any).size : 0);
-                        if (verifyInfo.exists && verifyInfo.size > 0) {
-                          console.log("Database copied successfully from bundle");
-                          console.log(`Bundled DB size: ${verifyInfo.size} bytes`);
-                          copied = true;
-                        }
+
+                    if (bundleInfo.exists) {
+                      console.log("Found DB in bundle at:", bundledDbPath);
+                      console.log('[DB DEBUG] Attempting copy from bundledDbPath to dbDest');
+                      await FileSystem.copyAsync({ from: bundledDbPath, to: dbDest });
+
+                      const verifyInfo = await FileSystem.getInfoAsync(dbDest);
+                      console.log('[DB DEBUG] post-bundle copy dbDest exists?', verifyInfo.exists, ' size=', ('size' in verifyInfo) ? (verifyInfo as any).size : 0);
+                      if (verifyInfo.exists && verifyInfo.size > 0) {
+                        console.log("Database copied successfully from bundle");
+                        console.log(`Bundled DB size: ${verifyInfo.size} bytes`);
+                        copied = true;
                       }
+                    }
                   }
                 } catch (fsError) {
                   console.warn('Filesystem approach failed:', fsError);
                 }
               }
-              
+
               if (!copied) {
                 console.warn('No prebuilt DB could be copied - will use empty database with test data');
                 try {
                   const debugPath = `${FileSystem.documentDirectory}db_debug_paths.txt`;
                   const debugMsg = `[DB FILE DEBUG] copy attempts failed for dbDest=${dbDest}\n`;
-                  await FileSystem.writeAsStringAsync(debugPath, debugMsg, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => {});
+                  await FileSystem.writeAsStringAsync(debugPath, debugMsg, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { });
                 } catch (e) { }
               }
             } catch (e) {
@@ -326,7 +326,7 @@ class DatabaseManager {
           }
           this.db = null;
         }
-        
+
         this.db = SQLite.openDatabaseSync(dbName);
 
         // Immediately query the native sqlite database_list to discover the actual
@@ -337,7 +337,7 @@ class DatabaseManager {
           try {
             const debugPath = `${FileSystem.documentDirectory}db_debug_paths.txt`;
             const content = `[DB PRAGMA] ${new Date().toISOString()}\n` + JSON.stringify(dbList, null, 2) + '\n';
-            await FileSystem.writeAsStringAsync(debugPath, content, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => {});
+            await FileSystem.writeAsStringAsync(debugPath, content, { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { });
           } catch (e) {
             // ignore write errors
           }
@@ -350,12 +350,12 @@ class DatabaseManager {
         } catch (e) {
           console.warn('Failed to read PRAGMA database_list for debug', e);
         }
-        
+
         // Verify database connection
         if (!this.db) {
           throw new Error('Database connection is null after opening');
         }
-        
+
         // Verify database has the necessary tables
         let hasParcelTable = false;
         try {
@@ -363,7 +363,7 @@ class DatabaseManager {
             "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='parcels'"
           );
           hasParcelTable = result ? ((result as any).count > 0) : false;
-          
+
           if (!hasParcelTable) {
             console.log("Database doesn't have parcels table - may need seeding");
             // The seeding will happen later in the initialization process if needed
@@ -372,15 +372,24 @@ class DatabaseManager {
           console.warn('Schema check failed:', schemaErr);
           // Will continue to regular validation
         }
-        
+
         // Verify database is functioning by executing a simple query
         try {
           // execSync may not return a value in some runtime shims; rely on try/catch
           // to detect failures instead of checking a return value.
           this.db.execSync("SELECT 1");
-          
+
           // Create tables
           await this.createTables();
+
+          // Ensure parcels are refreshed from the bundled prebuilt DB when the app
+          // ships a newer dataset. This preserves user complaints by only replacing
+          // the parcels table.
+          try {
+            await this.maybeRefreshParcelsFromBundledDb();
+          } catch (e) {
+            console.warn('[DB] maybeRefreshParcelsFromBundledDb failed', e);
+          }
 
           // Complaints schema migration: ensure backend_id column exists
           try {
@@ -411,7 +420,7 @@ class DatabaseManager {
           } catch (e) {
             console.warn('[DB] Failed to verify/migrate complaints schema', e);
           }
-          
+
           // Check if the database has data already
           const countResult = this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels");
           const count = countResult ? (countResult as any).count : 0;
@@ -448,19 +457,19 @@ class DatabaseManager {
           } else {
             console.log(`Database already has ${count} records, skipping seeding`);
           }
-          
+
         } catch (testError) {
           console.error('Database validation query failed:', testError);
           throw testError;
         }
-        
+
         // If we got here, initialization was successful
         console.log('Database initialized successfully');
         return;
-        
+
       } catch (e) {
         console.error(`Database initialization attempt ${attempts} failed:`, e);
-        
+
         // Close the DB if it was opened
         if (this.db) {
           try {
@@ -470,13 +479,13 @@ class DatabaseManager {
           }
           this.db = null;
         }
-        
+
         // If we've reached max attempts, throw the error
         if (attempts >= MAX_ATTEMPTS) {
           console.error('Max database initialization attempts reached, giving up');
           throw e;
         }
-        
+
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -485,6 +494,11 @@ class DatabaseManager {
 
   async createTables() {
     if (!this.db) throw new Error('Database not initialized');
+    // Small key/value table for versioning and lightweight migrations.
+    this.db.execSync(`CREATE TABLE IF NOT EXISTS meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );`);
     this.db.execSync(`CREATE TABLE IF NOT EXISTS parcels (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       num_parcel TEXT,
@@ -507,6 +521,201 @@ class DatabaseManager {
       created_at TEXT,
       data TEXT
     );`);
+  }
+
+  private getBundledDbMeta(): { version?: string; counts?: { total?: number } } | null {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../../prebuilt/parcelapp.meta.json');
+      return (mod && mod.default) ? mod.default : mod;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private getLocalMetaValue(key: string): string | null {
+    try {
+      const row = this.safeGetFirstSync('SELECT value FROM meta WHERE key = ?', [key]);
+      const v = row ? (row as any).value : null;
+      return v == null ? null : String(v);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private setLocalMetaValue(key: string, value: string) {
+    try {
+      if (!this.db) return;
+      this.db.runSync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [key, value]);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private async copyBundledDbToSQLiteDir(destName: string): Promise<string | null> {
+    try {
+      const sqliteDir = `${FileSystem.documentDirectory}SQLite`;
+      const dbDest = `${sqliteDir}/${destName}`;
+      try {
+        const dirInfo = await FileSystem.getInfoAsync(sqliteDir);
+        if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(sqliteDir, { intermediates: true });
+      } catch (e) {
+        // continue
+      }
+
+      // Best-effort: remove existing copy
+      await FileSystem.deleteAsync(dbDest, { idempotent: true }).catch(() => { });
+
+      const assetPath = require('../../prebuilt/parcelapp.db');
+      const asset = Asset.fromModule(assetPath);
+      await asset.downloadAsync().catch(() => { });
+      const source = asset.localUri || asset.uri;
+      if (!source) return null;
+
+      await FileSystem.copyAsync({ from: source, to: dbDest });
+      const verify = await FileSystem.getInfoAsync(dbDest);
+      if (!verify.exists) return null;
+      return dbDest;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private async maybeRefreshParcelsFromBundledDb(): Promise<void> {
+    if (!this.db) return;
+
+    const meta = this.getBundledDbMeta();
+    const bundledVersion = meta?.version ? String(meta.version) : null;
+    const bundledTotal = Number((meta as any)?.counts?.total ?? 0) || 0;
+
+    // If we have no bundled version, we can't safely detect changes.
+    if (!bundledVersion) return;
+
+    const localVersion = this.getLocalMetaValue('prebuilt_version');
+
+    const countRow = this.safeGetFirstSync('SELECT COUNT(*) as count FROM parcels');
+    const localTotal = countRow ? Number((countRow as any).count ?? 0) : 0;
+
+    // Refresh if the bundled version changed OR local data looks incomplete.
+    const needsRefresh = localVersion !== bundledVersion || (bundledTotal > 0 && localTotal < bundledTotal);
+    if (!needsRefresh) return;
+
+    console.log('[DB] Refreshing parcels from bundled DB', {
+      localVersion,
+      bundledVersion,
+      localTotal,
+      bundledTotal,
+    });
+
+    const tempName = 'parcelapp_bundled.db';
+    const copiedPath = await this.copyBundledDbToSQLiteDir(tempName);
+    if (!copiedPath) {
+      console.warn('[DB] Could not copy bundled parcelapp.db into SQLite dir; skipping refresh');
+      return;
+    }
+
+    let bundledDb: SQLiteDatabase | null = null;
+    try {
+      bundledDb = SQLite.openDatabaseSync(tempName);
+
+      const bundledCountRow = ((): any => {
+        try {
+          // Use a tiny inline query helper against the bundled DB.
+          return (bundledDb as any)?.getFirstSync
+            ? (bundledDb as any).getFirstSync('SELECT COUNT(*) as count FROM parcels')
+            : null;
+        } catch (e) {
+          return null;
+        }
+      })();
+
+      // Fallback: if getFirstSync isn't available on this build, just proceed.
+      const bundledCount = bundledCountRow ? Number(bundledCountRow.count ?? 0) : null;
+      if (bundledCount !== null && bundledCount === 0) {
+        console.warn('[DB] Bundled DB appears empty; skipping refresh');
+        return;
+      }
+
+      // Clear and re-import parcels while preserving complaints.
+      this.db.execSync('BEGIN;');
+      try {
+        this.db.execSync('DELETE FROM parcels;');
+
+        let insertStmt: any = null;
+        try {
+          insertStmt = this.db.prepareSync(
+            'INSERT INTO parcels (num_parcel, parcel_type, typ_pers, prenom, nom, prenom_m, nom_m, denominat, village, geometry, properties) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          );
+        } catch (e) {
+          insertStmt = null;
+        }
+
+        const pageSize = 300;
+        let offset = 0;
+        while (true) {
+          let rows: any[] = [];
+          try {
+            if ((bundledDb as any)?.getAllSync) {
+              rows = (bundledDb as any).getAllSync(
+                'SELECT num_parcel, parcel_type, typ_pers, prenom, nom, prenom_m, nom_m, denominat, village, geometry, properties FROM parcels LIMIT ? OFFSET ?'
+                , [pageSize, offset]
+              ) as any[];
+            } else if ((bundledDb as any)?.execSync) {
+              // Worst-case fallback: execSync shape differs; bail out.
+              rows = [];
+            }
+          } catch (e) {
+            rows = [];
+          }
+
+          if (!rows || rows.length === 0) break;
+
+          for (const r of rows) {
+            const vals = [
+              r.num_parcel ?? null,
+              r.parcel_type ?? null,
+              r.typ_pers ?? null,
+              r.prenom ?? null,
+              r.nom ?? null,
+              r.prenom_m ?? null,
+              r.nom_m ?? null,
+              r.denominat ?? null,
+              r.village ?? null,
+              r.geometry ?? null,
+              r.properties ?? null,
+            ];
+            if (insertStmt?.executeSync) {
+              insertStmt.executeSync(vals);
+            } else {
+              this.db.runSync(
+                'INSERT INTO parcels (num_parcel, parcel_type, typ_pers, prenom, nom, prenom_m, nom_m, denominat, village, geometry, properties) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                vals
+              );
+            }
+          }
+
+          offset += rows.length;
+        }
+
+        try {
+          if (insertStmt?.finalizeSync) insertStmt.finalizeSync();
+        } catch (e) {
+          // ignore
+        }
+
+        this.db.execSync('COMMIT;');
+      } catch (e) {
+        try { this.db.execSync('ROLLBACK;'); } catch (e2) { /* ignore */ }
+        throw e;
+      }
+
+      this.setLocalMetaValue('prebuilt_version', bundledVersion);
+      if (bundledTotal > 0) this.setLocalMetaValue('prebuilt_parcels_total', String(bundledTotal));
+      console.log('[DB] Parcels refresh complete');
+    } finally {
+      try { bundledDb?.closeSync?.(); } catch (e) { /* ignore */ }
+      await FileSystem.deleteAsync(`${FileSystem.documentDirectory}SQLite/${tempName}`, { idempotent: true }).catch(() => { });
+    }
   }
 
   private getComplaintParcelNumber(complaint: any): string | null {
@@ -649,7 +858,7 @@ class DatabaseManager {
         if (stmt && typeof stmt.executeSync === 'function') {
           if (nextDataStr) stmt.executeSync([parcelNumber, nextDataStr, id]);
           else stmt.executeSync([parcelNumber, id]);
-          try { if (typeof stmt.finalizeSync === 'function') stmt.finalizeSync(); } catch {}
+          try { if (typeof stmt.finalizeSync === 'function') stmt.finalizeSync(); } catch { }
         } else {
           const escapeSql = (v: any) => {
             if (v === null || v === undefined) return 'NULL';
@@ -674,7 +883,7 @@ class DatabaseManager {
   private stripDiacritics(s: string) {
     return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
-  
+
   // Safe wrappers around synchronous sqlite calls to avoid uncaught native errors
   private safeGetFirstSync(sql: string, params?: any[]) {
     try {
@@ -754,7 +963,7 @@ class DatabaseManager {
       return false;
     }
   }
-  
+
   /**
    * Normalize parsed properties: keep original keys and add lowercase/ascii variants
    * so UI code can look up many legacy key names reliably.
@@ -776,7 +985,7 @@ class DatabaseManager {
       const pascal = String(rawKey).replace(/[_\-]/g, '');
       if (!(pascal in normalized)) normalized[pascal] = val;
     }
-    
+
     // Add indexed prenom/nom zero-padded variants and canonical mappings for common keys
     const keys = Object.keys(normalized);
     for (const k of keys) {
@@ -840,42 +1049,42 @@ class DatabaseManager {
   }
 
   async seedData(forceReload = false) {
-  if (!this.db) {
-    console.error("Cannot seed data: database not initialized");
-    return;
-  }
-  // If running on a native device, avoid attempting to load very large
-  // JSON files in-process. This can crash the JS runtime or Metro. Prefer
-  // using the prebuilt DB or repository import scripts to populate the
-  // device database. Fall back to the small test dataset so the app stays
-  // functional.
-  try {
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      console.log('seedData: native platform detected, skipping large JSON import. Falling back to test data.');
-      await this.seedTestData();
+    if (!this.db) {
+      console.error("Cannot seed data: database not initialized");
       return;
     }
-  } catch (e) {
-    console.warn('seedData: Platform check failed, proceeding with caution', e);
-  }
-  try {
-    console.log("Checking if database needs seeding...");
-    const countRow = this.safeGetFirstSync('SELECT COUNT(*) as count FROM parcels');
-    const count = ((countRow as any) && (countRow as any).count) || 0;
-    console.log(`Current record count in database: ${count}`);
-    
-    if (count > 0 && !forceReload) {
-      console.log("Database already seeded, skipping. Use forceReload=true to reload data.");
-      return;
+    // If running on a native device, avoid attempting to load very large
+    // JSON files in-process. This can crash the JS runtime or Metro. Prefer
+    // using the prebuilt DB or repository import scripts to populate the
+    // device database. Fall back to the small test dataset so the app stays
+    // functional.
+    try {
+      if (Platform.OS === 'android' || Platform.OS === 'ios') {
+        console.log('seedData: native platform detected, skipping large JSON import. Falling back to test data.');
+        await this.seedTestData();
+        return;
+      }
+    } catch (e) {
+      console.warn('seedData: Platform check failed, proceeding with caution', e);
     }
-    
-    if (forceReload && count > 0) {
-      console.log("Force reloading data, clearing existing records...");
-      this.db.execSync('DELETE FROM parcels');
-      console.log("Existing records deleted");
-    }
-    
-    console.log("Database is empty or force reload requested, starting data seeding...");
+    try {
+      console.log("Checking if database needs seeding...");
+      const countRow = this.safeGetFirstSync('SELECT COUNT(*) as count FROM parcels');
+      const count = ((countRow as any) && (countRow as any).count) || 0;
+      console.log(`Current record count in database: ${count}`);
+
+      if (count > 0 && !forceReload) {
+        console.log("Database already seeded, skipping. Use forceReload=true to reload data.");
+        return;
+      }
+
+      if (forceReload && count > 0) {
+        console.log("Force reloading data, clearing existing records...");
+        this.db.execSync('DELETE FROM parcels');
+        console.log("Existing records deleted");
+      }
+
+      console.log("Database is empty or force reload requested, starting data seeding...");
 
       let insertStatement: any = null;
       try {
@@ -891,61 +1100,61 @@ class DatabaseManager {
       console.log("Attempting to load JSON data files...");
 
       try {
-      // On native mobile runtimes (android / ios) importing very large JSON
-      // files via require/import can crash Metro or the native JS runtime.
-      // To be safe, skip direct JSON imports on native platforms and fall
-      // back to the small test dataset. If you want the full dataset on a
-      // device, copy `prebuilt/parcelapp.db` into the app bundle or use the
-      // repository tooling to import the SQL into the prebuilt DB and then
-      // ensure the app copies that DB into its documentDirectory.
-      console.log('Platform.OS=', Platform?.OS);
-      if (Platform.OS === 'android' || Platform.OS === 'ios') {
-        console.log('Native runtime detected; skipping in-app JSON import to avoid crashes. Falling back to test data.');
-        individuels = [];
-        collectifs = [];
-      } else {
-        try {
-          // Prefer synchronous require() which works reliably with Metro bundler for JSON.
-          // Fall back to dynamic import() if require is unavailable for some runtimes.
-          let modInd: any = null;
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            modInd = require('./Parcels_individuels.json');
-          } catch (reqErr) {
-            try {
-              modInd = await import('./Parcels_individuels.json');
-            } catch (impErr) {
-              console.error('Both require() and import() failed for Parcels_individuels.json', reqErr, impErr);
-              modInd = null;
-            }
-          }
-          individuels = Array.isArray(modInd?.default) ? modInd.default : (Array.isArray(modInd) ? modInd : []);
-          console.log(`Loaded ${individuels.length} individual parcels from JSON`);
-        } catch (e) {
-          console.error("Failed to load individual parcels:", e);
+        // On native mobile runtimes (android / ios) importing very large JSON
+        // files via require/import can crash Metro or the native JS runtime.
+        // To be safe, skip direct JSON imports on native platforms and fall
+        // back to the small test dataset. If you want the full dataset on a
+        // device, copy `prebuilt/parcelapp.db` into the app bundle or use the
+        // repository tooling to import the SQL into the prebuilt DB and then
+        // ensure the app copies that DB into its documentDirectory.
+        console.log('Platform.OS=', Platform?.OS);
+        if (Platform.OS === 'android' || Platform.OS === 'ios') {
+          console.log('Native runtime detected; skipping in-app JSON import to avoid crashes. Falling back to test data.');
           individuels = [];
-        }
-
-        try {
-          let modCol: any = null;
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            modCol = require('./Parcels_collectives.json');
-          } catch (reqErr) {
-            try {
-              modCol = await import('./Parcels_collectives.json');
-            } catch (impErr) {
-              console.error('Both require() and import() failed for Parcels_collectives.json', reqErr, impErr);
-              modCol = null;
-            }
-          }
-          collectifs = Array.isArray(modCol?.default) ? modCol.default : (Array.isArray(modCol) ? modCol : []);
-          console.log(`Loaded ${collectifs.length} collective parcels from JSON`);
-        } catch (e) {
-          console.error("Failed to load collective parcels:", e);
           collectifs = [];
+        } else {
+          try {
+            // Prefer synchronous require() which works reliably with Metro bundler for JSON.
+            // Fall back to dynamic import() if require is unavailable for some runtimes.
+            let modInd: any = null;
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              modInd = require('./Parcels_individuels.json');
+            } catch (reqErr) {
+              try {
+                modInd = await import('./Parcels_individuels.json');
+              } catch (impErr) {
+                console.error('Both require() and import() failed for Parcels_individuels.json', reqErr, impErr);
+                modInd = null;
+              }
+            }
+            individuels = Array.isArray(modInd?.default) ? modInd.default : (Array.isArray(modInd) ? modInd : []);
+            console.log(`Loaded ${individuels.length} individual parcels from JSON`);
+          } catch (e) {
+            console.error("Failed to load individual parcels:", e);
+            individuels = [];
+          }
+
+          try {
+            let modCol: any = null;
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              modCol = require('./Parcels_collectives.json');
+            } catch (reqErr) {
+              try {
+                modCol = await import('./Parcels_collectives.json');
+              } catch (impErr) {
+                console.error('Both require() and import() failed for Parcels_collectives.json', reqErr, impErr);
+                modCol = null;
+              }
+            }
+            collectifs = Array.isArray(modCol?.default) ? modCol.default : (Array.isArray(modCol) ? modCol : []);
+            console.log(`Loaded ${collectifs.length} collective parcels from JSON`);
+          } catch (e) {
+            console.error("Failed to load collective parcels:", e);
+            collectifs = [];
+          }
         }
-      }
       } catch (err) {
         console.error('Unexpected error while attempting JSON import block in seedData:', err);
         individuels = [];
@@ -1081,14 +1290,14 @@ class DatabaseManager {
 
   async searchParcels(query: string, options?: { limit?: number; offset?: number }): Promise<{ rows: any[]; total: number }> {
     console.log(`Search request: "${query}" with options:`, JSON.stringify(options));
-    
+
     // Ensure query is defined and trimmed
     const cleanQuery = (query || '').trim();
     if (!cleanQuery) {
       console.log('Empty query, returning empty results');
       return { rows: [], total: 0 };
     }
-    
+
     if (!this.db) {
       console.error("Database not initialized during search");
       // Attempt to initialize the database if it's not ready
@@ -1104,7 +1313,7 @@ class DatabaseManager {
         return { rows: [], total: 0 };
       }
     }
-    
+
     // Log database stats
     try {
       const count = this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels");
@@ -1112,13 +1321,13 @@ class DatabaseManager {
     } catch (e) {
       console.error("Error checking parcel count:", e);
     }
-    
+
     // Special case for searching exact IDs like 1312010205587
     const isExactIdSearch = /^\d+$/.test(cleanQuery) && cleanQuery.length >= 10;
-    
+
     if (isExactIdSearch) {
       console.log(`Detected exact ID search for: ${cleanQuery}`);
-      
+
       // Helper to parse and normalize a single DB row into the shape returned by
       // the regular search flow (parse properties JSON, normalize keys, merge).
       const processRow = (r: any) => {
@@ -1146,10 +1355,10 @@ class DatabaseManager {
         }
 
         const collectiveKeys = [
-          'Prenom_M','Nom_M','Cas_de_Personne_001','Quel_est_le_nombre_d_affectata',
-          ...Array.from({ length: 27 }, (_, i) => `Prenom_${String(i+1).padStart(3,'0')}`),
-          ...Array.from({ length: 27 }, (_, i) => `Nom_${String(i+1).padStart(3,'0')}`),
-          'grappeSenegal','regionSenegal','departmentSenegal','arrondissementSenegal','communeSenegal','Village','Of','Enqueteur'
+          'Prenom_M', 'Nom_M', 'Cas_de_Personne_001', 'Quel_est_le_nombre_d_affectata',
+          ...Array.from({ length: 27 }, (_, i) => `Prenom_${String(i + 1).padStart(3, '0')}`),
+          ...Array.from({ length: 27 }, (_, i) => `Nom_${String(i + 1).padStart(3, '0')}`),
+          'grappeSenegal', 'regionSenegal', 'departmentSenegal', 'arrondissementSenegal', 'communeSenegal', 'Village', 'Of', 'Enqueteur'
         ];
         for (const k of collectiveKeys) {
           if (!(k in row.properties)) row.properties[k] = null;
@@ -1164,7 +1373,7 @@ class DatabaseManager {
         // 1. Direct exact match with specific ID
         console.log(`Trying exact match for ${cleanQuery} with = operator`);
         let exactMatch: any = this.safeGetFirstSync(
-          "SELECT * FROM parcels WHERE num_parcel = ?", 
+          "SELECT * FROM parcels WHERE num_parcel = ?",
           [cleanQuery]
         );
 
@@ -1179,18 +1388,18 @@ class DatabaseManager {
 
         if (exactMatch) {
           console.log(`✅ FOUND EXACT MATCH for ${cleanQuery} with ID ${(exactMatch as any).id}`);
-          return { 
-            rows: [processRow(exactMatch)], 
-            total: 1 
+          return {
+            rows: [processRow(exactMatch)],
+            total: 1
           };
         } else {
           console.log(`❌ No exact match found with = operator for ${cleanQuery}`);
         }
-        
+
         // 2. Try LIKE with exact match pattern
         console.log(`Trying LIKE match for ${cleanQuery}`);
         let likeMatch: any = this.safeGetFirstSync(
-          "SELECT * FROM parcels WHERE num_parcel LIKE ?", 
+          "SELECT * FROM parcels WHERE num_parcel LIKE ?",
           [cleanQuery]
         );
         if (likeMatch && (likeMatch as any).id == null) {
@@ -1200,18 +1409,18 @@ class DatabaseManager {
 
         if (likeMatch) {
           console.log(`✅ FOUND LIKE MATCH for ${cleanQuery} with ID ${(likeMatch as any).id}`);
-          return { 
-            rows: [processRow(likeMatch)], 
-            total: 1 
+          return {
+            rows: [processRow(likeMatch)],
+            total: 1
           };
         } else {
           console.log(`❌ No LIKE match found for ${cleanQuery}`);
         }
-        
+
         // 3. Try searching in properties JSON for the ID
         console.log(`Trying properties JSON search for ${cleanQuery}`);
         let jsonMatch: any = this.safeGetFirstSync(
-          "SELECT * FROM parcels WHERE properties LIKE ?", 
+          "SELECT * FROM parcels WHERE properties LIKE ?",
           [`%${cleanQuery}%`]
         );
         if (jsonMatch && (jsonMatch as any).id == null) {
@@ -1221,18 +1430,18 @@ class DatabaseManager {
 
         if (jsonMatch) {
           console.log(`✅ FOUND IN JSON for ${cleanQuery} with ID ${(jsonMatch as any).id}`);
-          return { 
-            rows: [processRow(jsonMatch)], 
-            total: 1 
+          return {
+            rows: [processRow(jsonMatch)],
+            total: 1
           };
         } else {
           console.log(`❌ No match found in properties JSON for ${cleanQuery}`);
         }
-        
+
         // If no match found after all direct attempts, try to import it
         try {
           console.log(`Attempting to import specific parcel: ${cleanQuery}`);
-          
+
           // Try the direct insert function first
           try {
             const directInsert = require('./directInsert').default;
@@ -1240,19 +1449,19 @@ class DatabaseManager {
               console.log(`Attempting direct insert for ${cleanQuery}...`);
               const insertResult = await directInsert.insertSpecificParcel(cleanQuery);
               console.log(`Direct insert result for ${cleanQuery}:`, insertResult);
-              
+
               if (insertResult) {
                 // Try fetching the newly inserted parcel
                 const newlyInserted = this.safeGetFirstSync(
-                  "SELECT * FROM parcels WHERE num_parcel = ?", 
+                  "SELECT * FROM parcels WHERE num_parcel = ?",
                   [cleanQuery]
                 );
-                
+
                 if (newlyInserted) {
                   console.log(`✅ FOUND NEWLY INSERTED PARCEL for ${cleanQuery}`);
-                  return { 
-                    rows: [newlyInserted], 
-                    total: 1 
+                  return {
+                    rows: [newlyInserted],
+                    total: 1
                   };
                 }
               }
@@ -1260,7 +1469,7 @@ class DatabaseManager {
           } catch (directInsertErr) {
             console.log(`Direct insert failed: ${directInsertErr}`);
           }
-          
+
           // Try the importSpecificParcel function
           try {
             const importer = require('./importSpecificParcel').default;
@@ -1268,19 +1477,19 @@ class DatabaseManager {
               console.log(`Attempting import for ${cleanQuery}...`);
               const imported = await importer.importSpecificParcel(cleanQuery);
               console.log(`Import result for ${cleanQuery}:`, imported);
-              
+
               if (imported) {
                 // Try fetching the imported parcel
                 const newlyImported = this.safeGetFirstSync(
-                  "SELECT * FROM parcels WHERE num_parcel = ?", 
+                  "SELECT * FROM parcels WHERE num_parcel = ?",
                   [cleanQuery]
                 );
-                
+
                 if (newlyImported) {
                   console.log(`✅ FOUND NEWLY IMPORTED PARCEL for ${cleanQuery}`);
-                  return { 
-                    rows: [newlyImported], 
-                    total: 1 
+                  return {
+                    rows: [newlyImported],
+                    total: 1
                   };
                 }
               }
@@ -1295,16 +1504,16 @@ class DatabaseManager {
         console.log(`Error during exact match search: ${e}`);
       }
     }
-    
+
     // If we reach here, either it wasn't an exact ID search or we couldn't find/import the exact ID
     // Proceed with regular search with intelligent ranking
     try {
       const q = `%${cleanQuery}%`;
       const limit = options?.limit ?? 50;
       const offset = options?.offset ?? 0;
-      
+
       console.log("Executing intelligent search query with pattern:", q);
-      
+
       // Enhanced search query with intelligent ranking:
       // 1. Exact matches first (num_parcel = query)
       // 2. Starts with matches (num_parcel LIKE 'query%')
@@ -1323,20 +1532,20 @@ class DatabaseManager {
         village LIKE ? OR
         properties LIKE ?
       `;
-      
+
       console.log("Executing count query with params:", cleanQuery);
       const countRow = this.safeGetFirstSync(
-        searchQuery, 
+        searchQuery,
         [cleanQuery, `${cleanQuery}%`, q, q, q, q, q, q, q, q]
       );
-      
+
       const total = (countRow as { total: number })?.total || 0;
       console.log(`Count query found ${total} total matches`);
-      
+
       if (total === 0) {
         return { rows: [], total: 0 };
       }
-      
+
       // Enhanced search query with intelligent ranking
       // ORDER BY clause prioritizes:
       // 1. Exact num_parcel match (rank 0)
@@ -1367,22 +1576,22 @@ class DatabaseManager {
         ORDER BY relevance_rank, id 
         LIMIT ? OFFSET ?
       `;
-      
+
       console.log("Executing select query with intelligent ranking");
       const rawRows: any[] = this.safeGetAllSync(
-        selectQuery, 
+        selectQuery,
         [
           cleanQuery, `${cleanQuery}%`, q, q, q, q, q,  // relevance calculation params
           cleanQuery, `${cleanQuery}%`, q, q, q, q, q, q, q, q,  // WHERE clause params
           limit, offset
         ]
       ) || [];
-      
+
       console.log(`Query returned ${rawRows.length} results`);
-      
+
       // Log the first few results for debugging
       if (rawRows.length > 0) {
-        console.log("First result:", 
+        console.log("First result:",
           JSON.stringify({
             id: rawRows[0].id,
             num_parcel: rawRows[0].num_parcel,
@@ -1411,8 +1620,8 @@ class DatabaseManager {
           parsedProps = {};
         }
 
-  // Normalize parsedProps to include lowercase/ascii variants for lookups
-  const normalizedProps = this.normalizeParsedProps(parsedProps);
+        // Normalize parsedProps to include lowercase/ascii variants for lookups
+        const normalizedProps = this.normalizeParsedProps(parsedProps);
 
         // Attach normalized properties back to row as an object
         row.properties = normalizedProps;
@@ -1428,11 +1637,11 @@ class DatabaseManager {
 
         // Ensure common collective keys exist (avoid undefined later in UI)
         const collectiveKeys = [
-          'Prenom_M','Nom_M','Cas_de_Personne_001','Quel_est_le_nombre_d_affectata',
+          'Prenom_M', 'Nom_M', 'Cas_de_Personne_001', 'Quel_est_le_nombre_d_affectata',
           // indexed affectataires
-          ...Array.from({ length: 27 }, (_, i) => `Prenom_${String(i+1).padStart(3,'0')}`),
-          ...Array.from({ length: 27 }, (_, i) => `Nom_${String(i+1).padStart(3,'0')}`),
-          'grappeSenegal','regionSenegal','departmentSenegal','arrondissementSenegal','communeSenegal','Village','Of','Enqueteur'
+          ...Array.from({ length: 27 }, (_, i) => `Prenom_${String(i + 1).padStart(3, '0')}`),
+          ...Array.from({ length: 27 }, (_, i) => `Nom_${String(i + 1).padStart(3, '0')}`),
+          'grappeSenegal', 'regionSenegal', 'departmentSenegal', 'arrondissementSenegal', 'communeSenegal', 'Village', 'Of', 'Enqueteur'
         ];
         for (const k of collectiveKeys) {
           if (!(k in row.properties)) row.properties[k] = null;
@@ -1473,18 +1682,18 @@ class DatabaseManager {
         console.error('Failed to initialize database:', initError);
         throw new Error('Database initialization failed during complaint submission');
       }
-      
+
       if (!this.db) {
         throw new Error('Database still not available after initialization attempt');
       }
     }
-    
+
     try {
       // Validate required fields
       // Local complaints use a local UUID primary key; remote uses backend_id.
       const looksLikeUuid = (s: any) => typeof s === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(s);
       if (!complaint.id || !looksLikeUuid(complaint.id)) {
-        const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           const r = (Math.random() * 16) | 0;
           const v = c === 'x' ? r : (r & 0x3) | 0x8;
           return v.toString(16);
@@ -1502,7 +1711,7 @@ class DatabaseManager {
 
       // Never persist backend_id inside the JSON blob.
       const complaintForJson = { ...(complaint || {}) };
-      try { delete (complaintForJson as any).backend_id; } catch {}
+      try { delete (complaintForJson as any).backend_id; } catch { }
 
       // Normalize parcel number consistently (column + JSON) so reads/edits always see it.
       const parcelNumber = this.getComplaintParcelNumber(complaint);
@@ -1511,8 +1720,8 @@ class DatabaseManager {
           (complaintForJson as any).parcel_number = parcelNumber;
           (complaintForJson as any).parcelNumber = parcelNumber;
         }
-      } catch {}
-      
+      } catch { }
+
       // Ensure complaints table exists
       try {
         this.db.execSync(`CREATE TABLE IF NOT EXISTS complaints (
@@ -1526,9 +1735,9 @@ class DatabaseManager {
         console.error('Error ensuring complaints table exists:', tableError);
         // Continue anyway, the table might already exist
       }
-      
+
       // Use prepared statements with safer error handling
-  let stmt: any;
+      let stmt: any;
       try {
         // Try to use prepared statement when available
         try {
@@ -1613,15 +1822,15 @@ class DatabaseManager {
             upd = null;
           }
           if (upd && typeof upd.executeSync === 'function') {
-            try { upd.executeSync([parcelNumber, complaint.id]); } catch {}
-            try { if (typeof upd.finalizeSync === 'function') upd.finalizeSync(); } catch {}
+            try { upd.executeSync([parcelNumber, complaint.id]); } catch { }
+            try { if (typeof upd.finalizeSync === 'function') upd.finalizeSync(); } catch { }
           } else {
             const escapeSql2 = (v: any) => { if (v === null || v === undefined) return 'NULL'; const s = String(v); return `'${s.replace(/'/g, "''")}'`; };
-            try { this.db.execSync(`UPDATE complaints SET parcel_number = ${escapeSql2(parcelNumber)} WHERE id = ${escapeSql2(complaint.id)}`); } catch {}
+            try { this.db.execSync(`UPDATE complaints SET parcel_number = ${escapeSql2(parcelNumber)} WHERE id = ${escapeSql2(complaint.id)}`); } catch { }
           }
         }
-      } catch {}
-      
+      } catch { }
+
       // Kick off an asynchronous remote submit to Supabase (best-effort).
       // If the caller intentionally set a temporary flag `_skip_background_submit`
       // we will NOT automatically try to submit (this prevents duplicate
@@ -1648,9 +1857,9 @@ class DatabaseManager {
       }
 
       return complaint.id;
-    } catch (e) { 
-      console.error('addComplaint error:', e); 
-      throw e; 
+    } catch (e) {
+      console.error('addComplaint error:', e);
+      throw e;
     }
   }
 
@@ -1726,7 +1935,7 @@ class DatabaseManager {
         console.log('tryRemoteSubmit: inserting to Supabase (no backend_id) for local id', localId);
         // Insert: exclude id so backend generates it
         const insertPayload = { ...payloadBase, created_at: new Date().toISOString() };
-        try { delete (insertPayload as any).id; } catch {}
+        try { delete (insertPayload as any).id; } catch { }
         // IMPORTANT: Avoid `.select()` here.
         // In many Supabase setups, RLS allows INSERT but denies SELECT.
         // Calling `.select()` forces "return=representation" and can make the
@@ -1772,7 +1981,7 @@ class DatabaseManager {
           }
         }
         // Never store backend_id in JSON
-        try { delete (updatedComplaint as any).backend_id; } catch {}
+        try { delete (updatedComplaint as any).backend_id; } catch { }
 
         // Write back local changes + backend_id column when created
         const backendToWrite = newBackendId || backendId;
@@ -1795,7 +2004,7 @@ class DatabaseManager {
           } catch (e) {
             console.warn('Prepared update failed for complaint remote metadata', e);
           } finally {
-            try { if (typeof updStmt.finalizeSync === 'function') updStmt.finalizeSync(); } catch {}
+            try { if (typeof updStmt.finalizeSync === 'function') updStmt.finalizeSync(); } catch { }
           }
         } else {
           const escapeSql = (v: any) => { if (v === null || v === undefined) return 'NULL'; const s = String(v); return `'${s.replace(/'/g, "''")}'`; };
@@ -1892,7 +2101,7 @@ class DatabaseManager {
         created_at: row.created_at || parsed?.created_at || null,
       };
       // Ensure backend_id is not duplicated inside JSON
-      try { delete (merged as any).backend_id_in_data; } catch {}
+      try { delete (merged as any).backend_id_in_data; } catch { }
       return merged;
     } catch (e) {
       console.warn('getComplaintById error', e);
@@ -1912,12 +2121,12 @@ class DatabaseManager {
       // Read existing backend_id from DB so we never lose it
       const existingRow: any = this.safeGetFirstSync('SELECT backend_id FROM complaints WHERE id = ? LIMIT 1', [complaint.id]);
       const existingBackendId = existingRow?.backend_id || null;
-      
+
       // Never persist backend_id inside the JSON blob.
       const complaintForJson: any = { ...(complaint || {}) };
-      try { delete complaintForJson.backend_id; } catch {}
-      try { delete complaintForJson.backendId; } catch {}
-      try { delete complaintForJson.backend_id_in_data; } catch {}
+      try { delete complaintForJson.backend_id; } catch { }
+      try { delete complaintForJson.backendId; } catch { }
+      try { delete complaintForJson.backend_id_in_data; } catch { }
 
       // Prefer existing backend_id from DB; only use complaint's if DB had none
       const backendIdToWrite = existingBackendId || (complaint as any)?.backend_id || (complaint as any)?.backendId || null;
@@ -1931,7 +2140,7 @@ class DatabaseManager {
             (complaintForJson as any).parcelNumber = parcelNumberToWrite;
           }
         }
-      } catch {}
+      } catch { }
 
       const dataStr = JSON.stringify(complaintForJson);
 
@@ -2044,10 +2253,10 @@ class DatabaseManager {
     try {
       let query = 'SELECT * FROM complaints';
       const params: any[] = [];
-      
+
       // Apply filters if provided
       const whereConditions: string[] = [];
-      
+
       // If provided, compare only the date portion (YYYY-MM-DD) to avoid timezone/time granularity issues.
       // Use substr(created_at,1,10) which works for ISO timestamps like 2025-09-02T10:45:23.835Z
       if (options?.startDate) {
@@ -2067,56 +2276,56 @@ class DatabaseManager {
         whereConditions.push("LOWER(json_extract(data, '$.commune')) LIKE ?");
         params.push(`%${String(options.commune).trim().toLowerCase()}%`);
       }
-      
+
       if (whereConditions.length > 0) {
         query += ' WHERE ' + whereConditions.join(' AND ');
       }
-      
+
       // Add sorting for consistent results
       query += ' ORDER BY created_at DESC';
-      
-      // Use prepared statement for better performance with filters
-  // Try to prepare statement, but fall back to direct safeExecSync select when prepareSync is unavailable or throws
-  let rows: any[] = [];
-  try {
-    const stmt: any = this.db.prepareSync ? this.db.prepareSync(query) : null;
-    if (stmt) {
-      // Some sqlite shims expect params as separate args; spread params array when calling.
-      if (typeof console !== 'undefined' && (global as any).__DEV__) {
-        try { console.debug('exportComplaints: query=', query, 'params=', params); } catch (e) { /* ignore */ }
-      }
-      try {
-        rows = (typeof stmt.allSync === 'function') ? stmt.allSync(...(params || [])) : (stmt.getAllSync ? stmt.getAllSync(...(params || [])) : []);
-      } catch (stmtErr) {
-        console.warn('exportComplaints stmt.allSync error, falling back to safeGetAllSync:', stmtErr);
-        rows = [];
-      }
-      // If stmt returned no rows, try the safeGetAllSync fallback which worked elsewhere
-      if (!rows || (Array.isArray(rows) && rows.length === 0)) {
-        try {
-          rows = this.safeGetAllSync(query, params) || [];
-        } catch (fbErr) {
-          console.warn('exportComplaints safeGetAllSync fallback failed after empty stmt result:', fbErr);
-          rows = [];
-        }
-      }
-      if (typeof stmt.finalizeSync === 'function') stmt.finalizeSync();
-    } else {
-      // Fallback: use safeExecSync and parse results via a temporary statement if available
-      try {
-        rows = this.safeGetAllSync(query, params) || [];
-      } catch (e) {
-        console.warn('exportComplaints fallback select failed', e);
-        rows = [];
-      }
-    }
-  } catch (e) {
-    console.warn('exportComplaints prepare/all failed, falling back:', e);
-    rows = this.safeGetAllSync(query, params) || [];
-  }
 
-      
-      
+      // Use prepared statement for better performance with filters
+      // Try to prepare statement, but fall back to direct safeExecSync select when prepareSync is unavailable or throws
+      let rows: any[] = [];
+      try {
+        const stmt: any = this.db.prepareSync ? this.db.prepareSync(query) : null;
+        if (stmt) {
+          // Some sqlite shims expect params as separate args; spread params array when calling.
+          if (typeof console !== 'undefined' && (global as any).__DEV__) {
+            try { console.debug('exportComplaints: query=', query, 'params=', params); } catch (e) { /* ignore */ }
+          }
+          try {
+            rows = (typeof stmt.allSync === 'function') ? stmt.allSync(...(params || [])) : (stmt.getAllSync ? stmt.getAllSync(...(params || [])) : []);
+          } catch (stmtErr) {
+            console.warn('exportComplaints stmt.allSync error, falling back to safeGetAllSync:', stmtErr);
+            rows = [];
+          }
+          // If stmt returned no rows, try the safeGetAllSync fallback which worked elsewhere
+          if (!rows || (Array.isArray(rows) && rows.length === 0)) {
+            try {
+              rows = this.safeGetAllSync(query, params) || [];
+            } catch (fbErr) {
+              console.warn('exportComplaints safeGetAllSync fallback failed after empty stmt result:', fbErr);
+              rows = [];
+            }
+          }
+          if (typeof stmt.finalizeSync === 'function') stmt.finalizeSync();
+        } else {
+          // Fallback: use safeExecSync and parse results via a temporary statement if available
+          try {
+            rows = this.safeGetAllSync(query, params) || [];
+          } catch (e) {
+            console.warn('exportComplaints fallback select failed', e);
+            rows = [];
+          }
+        }
+      } catch (e) {
+        console.warn('exportComplaints prepare/all failed, falling back:', e);
+        rows = this.safeGetAllSync(query, params) || [];
+      }
+
+
+
       // If SQL returned no rows but filters were requested, some sqlite runtimes may not support
       // json_extract or certain WHERE clauses; fall back to client-side filtering by selecting
       // all rows and applying filters in JS so the UI filters still work.
@@ -2179,7 +2388,7 @@ class DatabaseManager {
         } catch (e) {
           if (typeof console !== 'undefined' && (global as any).__DEV__) {
             try {
-              console.debug('exportComplaints: JSON.parse failed for row id=', r && r.id, 'raw data sample=', (r && r.data && typeof r.data === 'string') ? (r.data.length > 200 ? r.data.slice(0,200) + '... (truncated)' : r.data) : r && r.data, 'error=', e);
+              console.debug('exportComplaints: JSON.parse failed for row id=', r && r.id, 'raw data sample=', (r && r.data && typeof r.data === 'string') ? (r.data.length > 200 ? r.data.slice(0, 200) + '... (truncated)' : r.data) : r && r.data, 'error=', e);
             } catch (inner) {
               // ignore
             }
@@ -2187,15 +2396,15 @@ class DatabaseManager {
           return { id: r.id, parcelNumber: r.parcel_number, created_at: r.created_at };
         }
       });
-      
+
       // Format output based on requested format
       if (format === 'json') {
         return JSON.stringify(items, null, 2);
       }
-      
+
       // Optimize CSV generation for large datasets
       if (items.length === 0) return '';
-      
+
       // Get all unique keys from all items for complete headers
       const allKeys = new Set<string>();
       items.forEach((item: any) => {
@@ -2248,9 +2457,9 @@ class DatabaseManager {
       });
 
       return [headerLine].concat(csvRows).join('\n');
-    } catch (e) { 
-      console.error('exportComplaints error', e); 
-      throw e; 
+    } catch (e) {
+      console.error('exportComplaints error', e);
+      throw e;
     }
   }
 
@@ -2329,14 +2538,14 @@ class DatabaseManager {
 
   async getParcelsByType(type: 'individuel' | 'collectif') { if (!this.db) throw new Error('Database is not initialized.'); return this.safeGetAllSync('SELECT * FROM parcels WHERE parcel_type = ?', [type]) || []; }
 
-  async getParcelsByVillage(village: string) { 
-    if (!this.db) throw new Error('Database is not initialized.'); 
+  async getParcelsByVillage(village: string) {
+    if (!this.db) throw new Error('Database is not initialized.');
     const cacheKey = `village_${village}`;
     const cached = this.queryCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < 60000)) {
       return cached.result;
     }
-    
+
     const results = this.safeGetAllSync('SELECT * FROM parcels WHERE village = ?', [village]) || [];
     this.queryCache.set(cacheKey, { timestamp: Date.now(), result: results });
     return results;
@@ -2368,7 +2577,7 @@ class DatabaseManager {
       // Commune heuristic
       try {
         const parsedProps = parcel.properties ? JSON.parse(String(parcel.properties)) : {};
-        const keysToCheck = ['communeSenegal','communesenegal','commune','Commune','communes'];
+        const keysToCheck = ['communeSenegal', 'communesenegal', 'commune', 'Commune', 'communes'];
         let communeName: string | null = null;
         for (const k of keysToCheck) {
           if (parsedProps && parsedProps[k]) { communeName = String(parsedProps[k]).trim(); break; }
@@ -2383,7 +2592,7 @@ class DatabaseManager {
       // Department heuristic
       try {
         const parsedProps = parcel.properties ? JSON.parse(String(parcel.properties)) : {};
-        const deptKeys = ['departmentSenegal','departementsenegal','department','Département','DEPARTMENT'];
+        const deptKeys = ['departmentSenegal', 'departementsenegal', 'department', 'Département', 'DEPARTMENT'];
         let deptName: string | null = null;
         for (const k of deptKeys) {
           if (parsedProps && parsedProps[k]) { deptName = String(parsedProps[k]).trim(); break; }
@@ -2457,7 +2666,7 @@ class DatabaseManager {
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const rLat1 = toRad(lat1), rLat2 = toRad(lat2);
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(rLat1) * Math.cos(rLat2) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(rLat1) * Math.cos(rLat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return 6371000 * c;
       };
@@ -2519,9 +2728,9 @@ class DatabaseManager {
       }
 
       // Sort and pick best
-      scored.sort((a,b) => a.dist - b.dist);
+      scored.sort((a, b) => a.dist - b.dist);
       const top = scored.slice(0, DEFAULT_NEIGHBOR_LIMIT).map(s => {
-        try { s.row.__neighbor_distance_m = s.dist; s.row.__neighbor_within_1km = s.dist <= MAX_DIST_METERS; } catch (e) {}
+        try { s.row.__neighbor_distance_m = s.dist; s.row.__neighbor_within_1km = s.dist <= MAX_DIST_METERS; } catch (e) { }
         return s.row;
       });
 
@@ -2587,8 +2796,8 @@ class DatabaseManager {
     const pushIf = (v: any) => { if (v && typeof v === 'object') candidates.push(v); };
     for (const k of Object.keys(props)) {
       const lower = k.toLowerCase();
-      if (['geometry','geom','geojson'].includes(lower)) {
-        pushIf(typeof props[k] === 'string' ? (()=>{ try { return JSON.parse(props[k]); } catch { return null; } })() : props[k]);
+      if (['geometry', 'geom', 'geojson'].includes(lower)) {
+        pushIf(typeof props[k] === 'string' ? (() => { try { return JSON.parse(props[k]); } catch { return null; } })() : props[k]);
       } else {
         const val = props[k];
         if (val && typeof val === 'object' && val.type && (val.coordinates || val.type === 'Feature')) {
@@ -2623,12 +2832,12 @@ class DatabaseManager {
     if (cached && (Date.now() - cached.timestamp < 300000)) { // Cache for 5 minutes
       return cached.result;
     }
-    
-  const total = (this.safeGetFirstSync('SELECT COUNT(*) as count FROM parcels') as { count: number })?.count || 0;
-  const indiv = (this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels WHERE parcel_type = 'individuel'") as { count: number })?.count || 0;
-  const coll = (this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels WHERE parcel_type = 'collectif'") as { count: number })?.count || 0;
-  const villages = (this.safeGetAllSync('SELECT DISTINCT village FROM parcels WHERE village IS NOT NULL ORDER BY village') || []).map((r: any) => r.village);
-    
+
+    const total = (this.safeGetFirstSync('SELECT COUNT(*) as count FROM parcels') as { count: number })?.count || 0;
+    const indiv = (this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels WHERE parcel_type = 'individuel'") as { count: number })?.count || 0;
+    const coll = (this.safeGetFirstSync("SELECT COUNT(*) as count FROM parcels WHERE parcel_type = 'collectif'") as { count: number })?.count || 0;
+    const villages = (this.safeGetAllSync('SELECT DISTINCT village FROM parcels WHERE village IS NOT NULL ORDER BY village') || []).map((r: any) => r.village);
+
     const result = { totalParcels: total, individualParcels: indiv, collectiveParcels: coll, villages };
     this.queryCache.set(cacheKey, { timestamp: Date.now(), result });
     return result;
@@ -2638,7 +2847,7 @@ class DatabaseManager {
   clearCache() {
     this.queryCache.clear();
   }
-  
+
   // Diagnostic function to check database status
   async getDiagnostics(): Promise<{
     isInitialized: boolean;
@@ -2671,7 +2880,7 @@ class DatabaseManager {
 
     return result;
   }
-  
+
 }
 
 // Create and export singleton instance
