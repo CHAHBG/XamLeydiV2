@@ -30,7 +30,8 @@ export function useComplaints(filters: FilterOptions) {
                 let query = supabase
                     .from('complaints')
                     .select('*')
-                    .order('date', { ascending: false });
+                    .order('date', { ascending: false })
+                    .limit(5000);
 
                 if (activeFilters.startDate) {
                     query = query.gte('date', activeFilters.startDate.toISOString());
