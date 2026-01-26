@@ -1,10 +1,15 @@
 [build]
-  base = "db-prep-web"
-  command = "npm run build"
+  # Directory to change to before running the build command
+  base = "dashboard"
+  
+  # Directory where the build output will be located (relative to "base")
   publish = "dist"
+  
+  # Command to build your site
+  command = "npm run build"
 
-# SPA fallback
 [[redirects]]
+  # Redirect all routes to index.html for Single Page App (SPA) routing
   from = "/*"
   to = "/index.html"
   status = 200
