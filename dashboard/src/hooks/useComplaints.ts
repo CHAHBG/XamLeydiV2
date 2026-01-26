@@ -40,7 +40,7 @@ export function useComplaints(filters: FilterOptions) {
                     query = query.lte('date', activeFilters.endDate.toISOString());
                 }
                 if (activeFilters.commune) {
-                    query = query.eq('commune', activeFilters.commune);
+                    query = query.ilike('commune', activeFilters.commune);
                 }
                 if (activeFilters.village) {
                     query = query.eq('village', activeFilters.village);
