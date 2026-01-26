@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Complaint } from '../../types/complaint';
 import { groupByReason } from '../../utils/aggregations';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
