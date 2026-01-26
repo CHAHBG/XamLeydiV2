@@ -27,10 +27,15 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                 // Then processing in JS. Not efficient for large DB but okay for demo.
                 // Better: use a distinct RPC function.
                 // For now, I'll fetch unique communes via JS post-processing to keep it simple without DB migrations.
-                .select('commune');
+                // For now, I'll fetch unique communes via JS post-processing to keep it simple without DB migrations.
+                .select('commune')
+                .limit(5000);
 
             if (data) {
-                const unique = Array.from(new Set(data.map(d => d.commune).filter(Boolean))).sort();
+                const unique = Array.from(new Set(
+                    data.map(d => d.commune?.toUpperCase()) // Normalize to uppercase
+                        .filter(Boolean)
+                )).sort();
                 setCommunes(unique);
             }
         }
@@ -48,10 +53,19 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
             const { data } = await supabase
                 .from('complaints')
                 .select('village')
-                .eq('commune', filters.commune);
+                .eq('commune', filters.commune) // Note: This might need to be case-insensitive if mixed case exists in DB column for the selected value
+                // .ilike('commune', filters.commune) // Safer if we are selecting by normalized value
+                // Actually if we normalized the options, filters.commune is uppercase. 
+                // We should probably filter case-insensitively or ensure our options match DB reality.
+                // Best approach: Fetch matches via ilike to catch 'Netteboulou' when 'NETTEBOULOU' is selected.
+                .ilike('commune', filters.commune)
+                .limit(5000);
 
             if (data) {
-                const unique = Array.from(new Set(data.map(d => d.village).filter(Boolean))).sort();
+                const unique = Array.from(new Set(
+                    data.map(d => d.village?.toUpperCase()) // Normalize to uppercase
+                        .filter(Boolean)
+                )).sort();
                 setVillages(unique);
             }
         }
