@@ -45,7 +45,7 @@ export function MotifChart({ data }: { data: Complaint[] }) {
                         ))}
                     </Pie>
                     <Tooltip />
-                    <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '12px' }} />
+                    {/* <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '12px' }} /> */}
                 </PieChart>
             </ResponsiveContainer>
         </div>

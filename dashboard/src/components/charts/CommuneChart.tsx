@@ -10,7 +10,8 @@ export function CommuneChart({ data }: { data: Complaint[] }) {
         const grouped = groupByCommune(data);
         return Object.entries(grouped)
             .map(([commune, count]) => ({ commune, count }))
-            .sort((a, b) => b.count - a.count);
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 15); // Limit to top 15 communes for readability
     }, [data]);
 
     return (
