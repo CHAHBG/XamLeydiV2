@@ -23,34 +23,38 @@ export function Dashboard() {
     const uniqueCommunes = new Set(data.map(c => c.commune)).size;
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-10" data-version="1.1.0-fix-pagination">
+        <div className="min-h-screen bg-background font-sans text-slate-900 pb-20" data-version="1.2.0-modern-ui">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <LayoutDashboard className="text-primary" size={24} />
-                        <h1 className="text-xl font-bold text-gray-900">Xamleydi Plaintes dashboard</h1>
+            <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <LayoutDashboard className="text-primary" size={24} />
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Xamleydi Dashboard</h1>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => exportToXLSX(data, filters)}
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-sm font-medium rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                             disabled={loading || data.length === 0}
                         >
-                            <FileSpreadsheet size={16} className="text-green-600" /> Export XLSX
+                            <FileSpreadsheet size={18} className="text-emerald-600" />
+                            <span>Export Excel</span>
                         </button>
                         <button
                             onClick={() => exportToCSV(data, filters)}
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-soft text-white bg-primary hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                             disabled={loading || data.length === 0}
                         >
-                            <Download size={16} /> Export CSV
+                            <Download size={18} />
+                            <span>Export CSV</span>
                         </button>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
 
                 {/* Filters */}
                 <FilterPanel filters={filters} onFilterChange={setFilters} />
