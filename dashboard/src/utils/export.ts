@@ -1,6 +1,8 @@
 import type { Complaint, FilterOptions } from '../types/complaint';
 import { format } from 'date-fns';
 
+import * as XLSX from 'xlsx';
+
 export const exportToCSV = (data: Complaint[], filters: FilterOptions) => {
     const headers = [
         'ID', 'Date', 'Commune', 'Village', 'Nom Plaignant', 'Sexe', 'ID Plaignant',
@@ -47,4 +49,38 @@ export const exportToCSV = (data: Complaint[], filters: FilterOptions) => {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
+};
+
+export const exportToXLSX = (data: Complaint[], filters: FilterOptions) => {
+    // Headers are inferred from object keys, or we can use keys directly in map, so headers array is unused in JSON_to_sheet logic unless we use header option.
+    // For simplicity, we just rely on keys.
+
+    const rows = data.map(c => ({
+        'ID': c.id,
+        'Date': c.date,
+        'Commune': c.commune,
+        'Village': c.village,
+        'Nom Plaignant': c.complainant_name,
+        'Sexe': c.complainant_sex,
+        'ID Plaignant': c.complainant_id,
+        'Contact': c.complainant_contact,
+        'Motif': c.complaint_reason,
+        'Catégorie': c.complaint_category,
+        'Description': c.complaint_description,
+        'Resolution Attendue': c.expected_resolution,
+        'Mode Reception': c.complaint_reception_mode,
+        'Utilisation': c.type_usage,
+        'Nature Parcelle': c.nature_parcelle
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Plaintes");
+
+    // Format filename
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    const communeStr = filters.commune ? `_${filters.commune}` : '';
+    const filename = `plaintes${communeStr}_${dateStr}.xlsx`;
+
+    XLSX.writeFile(workbook, filename);
 };

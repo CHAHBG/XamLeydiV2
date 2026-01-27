@@ -9,8 +9,8 @@ import { MotifChart } from '../charts/MotifChart';
 import { SexChart } from '../charts/SexChart';
 import { TimeSeriesChart } from '../charts/TimeSeriesChart';
 import { ComplaintsTable } from '../tables/ComplaintsTable';
-import { exportToCSV } from '../../utils/export';
-import { LayoutDashboard, Users, AlertCircle, FileText, Download } from 'lucide-react';
+import { exportToCSV, exportToXLSX } from '../../utils/export';
+import { LayoutDashboard, Users, AlertCircle, FileText, Download, FileSpreadsheet } from 'lucide-react';
 
 export function Dashboard() {
     const [filters, setFilters] = useState<FilterOptions>({});
@@ -29,9 +29,16 @@ export function Dashboard() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <LayoutDashboard className="text-primary" size={24} />
-                        <h1 className="text-xl font-bold text-gray-900">Tableau de Bord des Plaintes</h1>
+                        <h1 className="text-xl font-bold text-gray-900">Xamleydi Plaintes dashboard</h1>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => exportToXLSX(data, filters)}
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            disabled={loading || data.length === 0}
+                        >
+                            <FileSpreadsheet size={16} className="text-green-600" /> Export XLSX
+                        </button>
                         <button
                             onClick={() => exportToCSV(data, filters)}
                             className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
