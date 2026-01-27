@@ -15,6 +15,7 @@ import { LayoutDashboard, Users, AlertCircle, FileText, Download, FileSpreadshee
 export function Dashboard() {
     const [filters, setFilters] = useState<FilterOptions>({});
     const { data, loading, error } = useComplaints(filters);
+    const [exportLoading, setExportLoading] = useState(false);
 
     // Calculate summary stats
     const totalComplaints = data.length;
