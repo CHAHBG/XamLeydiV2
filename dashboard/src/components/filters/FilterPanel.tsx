@@ -102,30 +102,37 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
     }
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-gray-800">Filtres</h3>
-                <button onClick={clearFilters} className="text-sm text-gray-500 hover:text-primary flex items-center gap-1">
-                    <RotateCcw size={14} /> Réinitialiser
+        <div className="bg-white p-6 rounded-xl shadow-card border border-slate-100 space-y-6">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span className="w-1 h-6 bg-primary rounded-full"></span>
+                    Filtres
+                </h3>
+                <button
+                    onClick={clearFilters}
+                    className="text-sm font-medium text-slate-500 hover:text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                    <RotateCcw size={14} strokeWidth={2.5} />
+                    Réinitialiser
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Date Range - Simplified using native date inputs */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Période (Début)</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Date Range */}
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Période (Début)</label>
                     <input
                         type="date"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2"
+                        className="block w-full rounded-lg border-slate-200 bg-slate-50 p-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white transition-all"
                         value={filters.startDate ? filters.startDate.toISOString().split('T')[0] : ''}
                         onChange={(e) => handleChange('startDate', e.target.value ? new Date(e.target.value) : undefined)}
                     />
                 </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Période (Fin)</label>
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Période (Fin)</label>
                     <input
                         type="date"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2"
+                        className="block w-full rounded-lg border-slate-200 bg-slate-50 p-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white transition-all"
                         value={filters.endDate ? filters.endDate.toISOString().split('T')[0] : ''}
                         onChange={(e) => handleChange('endDate', e.target.value ? new Date(e.target.value) : undefined)}
                     />
@@ -146,12 +153,12 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                     disabled={!filters.commune}
                 />
 
-                <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Motif</label>
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Motif</label>
                     <input
                         type="text"
                         placeholder="Rechercher..."
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2"
+                        className="block w-full rounded-lg border-slate-200 bg-slate-50 p-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white transition-all placeholder:text-slate-400"
                         value={filters.motif || ''}
                         onChange={(e) => handleChange('motif', e.target.value || undefined)}
                     />
