@@ -33,7 +33,7 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
 
             if (data) {
                 const unique = Array.from(new Set(
-                    data.map(d => d.commune?.toUpperCase()) // Normalize to uppercase
+                    data.map(d => d.commune?.toUpperCase().trim()) // Normalize to uppercase and trim
                         .filter(Boolean)
                 )).sort();
                 setCommunes(unique);
@@ -63,7 +63,7 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
 
             if (data) {
                 const unique = Array.from(new Set(
-                    data.map(d => d.village?.toUpperCase()) // Normalize to uppercase
+                    data.map(d => d.village?.toUpperCase().trim()) // Normalize to uppercase and trim
                         .filter(Boolean)
                 )).sort();
                 setVillages(unique);

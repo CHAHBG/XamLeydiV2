@@ -27,39 +27,58 @@ export function useComplaints(filters: FilterOptions) {
         async function fetchComplaints() {
             try {
                 setLoading(true);
-                let query = supabase
-                    .from('complaints')
-                    .select('*')
-                    .order('date', { ascending: false })
-                    .limit(5000);
+                let allData: Complaint[] = [];
+                let page = 0;
+                const pageSize = 1000;
+                let fetchMore = true;
 
-                if (activeFilters.startDate) {
-                    query = query.gte('date', activeFilters.startDate.toISOString());
-                }
-                if (activeFilters.endDate) {
-                    query = query.lte('date', activeFilters.endDate.toISOString());
-                }
-                if (activeFilters.commune) {
-                    query = query.ilike('commune', activeFilters.commune);
-                }
-                if (activeFilters.village) {
-                    query = query.eq('village', activeFilters.village);
-                }
-                if (activeFilters.motif) {
-                    query = query.ilike('complaint_reason', `%${activeFilters.motif}%`);
-                }
-                if (activeFilters.sex && activeFilters.sex !== 'all') {
-                    query = query.eq('complainant_sex', activeFilters.sex);
-                }
-                if (activeFilters.category && activeFilters.category !== 'all') {
-                    query = query.eq('complaint_category', activeFilters.category);
-                }
+                while (fetchMore) {
+                    let query = supabase
+                        .from('complaints')
+                        .select('*')
+                        .order('date', { ascending: false })
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
 
-                const { data: result, error: err } = await query;
+                    if (activeFilters.startDate) {
+                        query = query.gte('date', activeFilters.startDate.toISOString());
+                    }
+                    if (activeFilters.endDate) {
+                        query = query.lte('date', activeFilters.endDate.toISOString());
+                    }
+                    if (activeFilters.commune) {
+                        query = query.ilike('commune', activeFilters.commune);
+                    }
+                    if (activeFilters.village) {
+                        query = query.eq('village', activeFilters.village);
+                    }
+                    if (activeFilters.motif) {
+                        query = query.ilike('complaint_reason', `%${activeFilters.motif}%`);
+                    }
+                    if (activeFilters.sex && activeFilters.sex !== 'all') {
+                        query = query.eq('complainant_sex', activeFilters.sex);
+                    }
+                    if (activeFilters.category && activeFilters.category !== 'all') {
+                        query = query.eq('complaint_category', activeFilters.category);
+                    }
+
+                    const { data: result, error: err } = await query;
+
+                    if (err) throw err;
+
+                    if (result) {
+                        allData = [...allData, ...(result as Complaint[])];
+                        if (result.length < pageSize) {
+                            fetchMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        fetchMore = false;
+                    }
+                }
 
                 if (mounted) {
-                    if (err) throw err;
-                    setData(result as Complaint[] || []);
+                    setData(allData);
                     setError(null);
                 }
             } catch (err: any) {
