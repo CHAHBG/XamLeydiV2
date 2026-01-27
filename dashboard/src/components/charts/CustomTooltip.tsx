@@ -1,6 +1,7 @@
 import { TooltipProps } from 'recharts';
+import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
-export const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+export const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
         return (
             <div className="bg-white p-3 border border-slate-100 shadow-xl rounded-lg">

@@ -22,10 +22,10 @@ export function TimeSeriesChart({ data }: { data: Complaint[] }) {
                     {['day', 'week', 'month'].map((t) => (
                         <button
                             key={t}
-                            onClick={() => setInterval(t asany)}
+                            onClick={() => setInterval(t as any)}
                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${interval === t
-                                    ? 'bg-white text-primary shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'bg-white text-primary shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             {t === 'day' ? 'Jour' : t === 'week' ? 'Semaine' : 'Mois'}

@@ -22,34 +22,53 @@ export function Dashboard() {
     const nonSensitiveCount = totalComplaints - sensitiveCount;
     const uniqueCommunes = new Set(data.map(c => c.commune)).size;
 
+    // Handle export logic
+    const handleExport = async (type: 'csv' | 'excel') => {
+        setExportLoading(true);
+        try {
+            if (type === 'csv') {
+                await exportToCSV(data, filters);
+            } else {
+                await exportToXLSX(data, filters);
+            }
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-background font-sans text-slate-900 pb-20" data-version="1.2.0-modern-ui">
+        <div className="min-h-screen bg-slate-50/50">
             {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <LayoutDashboard className="text-primary" size={24} />
+            <header className="sticky top-0 z-30 bg-slate-900 shadow-lg border-b border-slate-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-20">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-primary/20 p-2.5 rounded-xl border border-primary/20 backdrop-blur-sm">
+                                <LayoutDashboard className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold tracking-tight text-white">Xamleydi Dashboard</h1>
+                                <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Analytics Overview</p>
+                            </div>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Xamleydi Dashboard</h1>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => exportToXLSX(data, filters)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-sm font-medium rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                            disabled={loading || data.length === 0}
-                        >
-                            <FileSpreadsheet size={18} className="text-emerald-600" />
-                            <span>Export Excel</span>
-                        </button>
-                        <button
-                            onClick={() => exportToCSV(data, filters)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-soft text-white bg-primary hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                            disabled={loading || data.length === 0}
-                        >
-                            <Download size={18} />
-                            <span>Export CSV</span>
-                        </button>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => handleExport('excel')}
+                                disabled={exportLoading || loading || data.length === 0}
+                                className="inline-flex items-center px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm font-semibold text-slate-300 shadow-lg hover:bg-slate-700 hover:text-white hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                {exportLoading ? 'Exporting...' : 'Export Excel'}
+                            </button>
+                            <button
+                                onClick={() => handleExport('csv')}
+                                disabled={exportLoading || loading || data.length === 0}
+                                className="inline-flex items-center px-4 py-2 bg-primary border border-transparent rounded-lg text-sm font-semibold text-white shadow-lg shadow-primary/30 hover:bg-primary-dark hover:shadow-primary/50 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                {exportLoading ? 'Exporting...' : 'Export CSV'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
