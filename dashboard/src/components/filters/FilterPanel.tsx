@@ -56,17 +56,20 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                 return;
             }
 
+            let allVillages: Set<string> = new Set();
+            let page = 0;
+            const pageSize = 1000;
+            let fetchMore = true;
+
             while (fetchMore) {
                 const { data, error } = await supabase
                     .from('complaints')
                     .select('village')
-                    .eq('commune', filters.commune) // We can't easily use ilike here without fetching everything first if we want strict relation. 
-                    // Actually, let's keep the filter simple.
                     .ilike('commune', filters.commune)
                     .order('id', { ascending: true })
                     .range(page * pageSize, (page + 1) * pageSize - 1);
 
-                if (error || !data) {
+                if (error || !data || data.length === 0) {
                     fetchMore = false;
                 } else {
                     data.forEach(d => {
@@ -80,6 +83,8 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                     }
                 }
             }
+
+            setVillages(Array.from(allVillages).sort());
         }
         fetchVillages();
     }, [filters.commune]);
