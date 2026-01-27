@@ -16,28 +16,33 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
     // Fetch communes on mount
     useEffect(() => {
         async function fetchCommunes() {
-            const { data } = await supabase
-                .from('complaints')
-                .select('commune') // Distinct not directly supported via API easily without .rpc or hack, but let's try .csv or just fetch all logic? 
-                // Better: create a stored procedure or just use lightweight query if possible.
-                // Actually Supabase JS client supports .select('commune', { count: 'exact', head: false })?
-                // Standard way for distinct: .select('commune').distinct() doesn't exist directly in older versions?
-                // It does exist or we use .select('commune').range(0, 1000) then Set?
-                // Efficient way: .from('complaints').select('commune').not('commune', 'is', null) 
-                // Then processing in JS. Not efficient for large DB but okay for demo.
-                // Better: use a distinct RPC function.
-                // For now, I'll fetch unique communes via JS post-processing to keep it simple without DB migrations.
-                // For now, I'll fetch unique communes via JS post-processing to keep it simple without DB migrations.
-                .select('commune')
-                .limit(5000);
+            let allCommunes: Set<string> = new Set();
+            let page = 0;
+            const pageSize = 1000;
+            let fetchMore = true;
 
-            if (data) {
-                const unique = Array.from(new Set(
-                    data.map(d => d.commune?.toUpperCase().trim()) // Normalize to uppercase and trim
-                        .filter(Boolean)
-                )).sort();
-                setCommunes(unique);
+            while (fetchMore) {
+                const { data, error } = await supabase
+                    .from('complaints')
+                    .select('commune')
+                    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                if (error || !data || data.length === 0) {
+                    fetchMore = false;
+                } else {
+                    data.forEach(d => {
+                        if (d.commune) allCommunes.add(d.commune.toUpperCase().trim());
+                    });
+
+                    if (data.length < pageSize) {
+                        fetchMore = false;
+                    } else {
+                        page++;
+                    }
+                }
             }
+
+            setCommunes(Array.from(allCommunes).sort());
         }
         fetchCommunes();
     }, []);

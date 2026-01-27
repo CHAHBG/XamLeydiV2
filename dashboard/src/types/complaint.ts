@@ -20,6 +20,8 @@ export interface Complaint {
     nature_parcelle?: string;
     source?: string;
     sent_remote?: boolean;
+    data?: any;
+    remote_response?: any;
 }
 
 export interface FilterOptions {
