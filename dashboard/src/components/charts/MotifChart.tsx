@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Complaint } from '../../types/complaint';
 import { groupByReason } from '../../utils/aggregations';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { CustomTooltip, CHART_COLORS } from './CustomTooltip';
 
 export function MotifChart({ data }: { data: Complaint[] }) {
@@ -34,13 +34,7 @@ export function MotifChart({ data }: { data: Complaint[] }) {
                         ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend
-                        layout="vertical"
-                        verticalAlign="middle"
-                        align="right"
-                        wrapperStyle={{ fontSize: '12px', color: '#64748B' }}
-                        formatter={(value) => <span className="text-slate-600 font-medium ml-1">{value}</span>}
-                    />
+
                 </PieChart>
             </ResponsiveContainer>
         </div>
