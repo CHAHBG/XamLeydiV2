@@ -58,7 +58,6 @@ export function ComplaintsTable({ data }: ComplaintsTableProps) {
     };
 
     return (
-    return (
         <div className="bg-white rounded-xl shadow-card border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-100">
@@ -201,8 +200,8 @@ export function ComplaintsTable({ data }: ComplaintsTableProps) {
                                         onClick={() => setCurrentPage(p)}
                                         aria-current={currentPage === p ? 'page' : undefined}
                                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold rounded-lg transition-all ${currentPage === p
-                                                ? 'z-10 bg-primary text-white shadow-soft border-transparent'
-                                                : 'bg-white border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                            ? 'z-10 bg-primary text-white shadow-soft border-transparent'
+                                            : 'bg-white border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                             }`}
                                     >
                                         {p}
