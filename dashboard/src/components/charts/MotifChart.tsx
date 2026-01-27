@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import type { Complaint } from '../../types/complaint';
 import { groupByReason } from '../../utils/aggregations';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { CustomTooltip, CHART_COLORS } from './CustomTooltip';
 
 export function MotifChart({ data }: { data: Complaint[] }) {
     const chartData = useMemo(() => {
@@ -14,38 +13,34 @@ export function MotifChart({ data }: { data: Complaint[] }) {
     }, [data]);
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par Motif</h3>
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white p-6 rounded-xl shadow-card border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <span className="w-1 h-5 bg-primary rounded-full"></span>
+                Répartition par Motif
+            </h3>
+            <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                     <Pie
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        outerRadius={100}
-                        fill="#8884d8"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={2}
                         dataKey="value"
-                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                            if (percent === undefined || midAngle === undefined) return null;
-                            const RADIAN = Math.PI / 180;
-                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-                            return percent > 0.05 ? (
-                                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>
-                                    {`${(percent * 100).toFixed(0)}%`}
-                                </text>
-                            ) : null;
-                        }}
                     >
                         {chartData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={0} />
                         ))}
                     </Pie>
-                    <Tooltip />
-                    {/* <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '12px' }} /> */}
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                        layout="vertical"
+                        verticalAlign="middle"
+                        align="right"
+                        wrapperStyle={{ fontSize: '12px', color: '#64748B' }}
+                        formatter={(value) => <span className="text-slate-600 font-medium ml-1">{value}</span>}
+                    />
                 </PieChart>
             </ResponsiveContainer>
         </div>
