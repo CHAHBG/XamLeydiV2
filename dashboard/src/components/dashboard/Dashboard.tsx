@@ -23,7 +23,7 @@ export function Dashboard() {
     const uniqueCommunes = new Set(data.map(c => c.commune)).size;
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-10">
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-10" data-version="1.1.0-fix-pagination">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
