@@ -25,6 +25,7 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                 const { data, error } = await supabase
                     .from('complaints')
                     .select('commune')
+                    .order('id', { ascending: true })
                     .range(page * pageSize, (page + 1) * pageSize - 1);
 
                 if (error || !data || data.length === 0) {
@@ -55,23 +56,29 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
                 return;
             }
 
-            const { data } = await supabase
-                .from('complaints')
-                .select('village')
-                .eq('commune', filters.commune) // Note: This might need to be case-insensitive if mixed case exists in DB column for the selected value
-                // .ilike('commune', filters.commune) // Safer if we are selecting by normalized value
-                // Actually if we normalized the options, filters.commune is uppercase. 
-                // We should probably filter case-insensitively or ensure our options match DB reality.
-                // Best approach: Fetch matches via ilike to catch 'Netteboulou' when 'NETTEBOULOU' is selected.
-                .ilike('commune', filters.commune)
-                .limit(5000);
+            while (fetchMore) {
+                const { data, error } = await supabase
+                    .from('complaints')
+                    .select('village')
+                    .eq('commune', filters.commune) // We can't easily use ilike here without fetching everything first if we want strict relation. 
+                    // Actually, let's keep the filter simple.
+                    .ilike('commune', filters.commune)
+                    .order('id', { ascending: true })
+                    .range(page * pageSize, (page + 1) * pageSize - 1);
 
-            if (data) {
-                const unique = Array.from(new Set(
-                    data.map(d => d.village?.toUpperCase().trim()) // Normalize to uppercase and trim
-                        .filter(Boolean)
-                )).sort();
-                setVillages(unique);
+                if (error || !data) {
+                    fetchMore = false;
+                } else {
+                    data.forEach(d => {
+                        if (d.village) allVillages.add(d.village.toUpperCase().trim());
+                    });
+
+                    if (data.length < pageSize) {
+                        fetchMore = false;
+                    } else {
+                        page++;
+                    }
+                }
             }
         }
         fetchVillages();
