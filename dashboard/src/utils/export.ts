@@ -8,7 +8,8 @@ export const exportToCSV = (data: Complaint[], filters: FilterOptions) => {
         'ID', 'Date', 'Commune', 'Village', 'Nom Plaignant', 'Sexe', 'ID Plaignant',
         'Contact', 'Motif', 'Catégorie', 'Description', 'Resolution Attendue',
         'Mode Reception', 'Utilisation', 'Nature Parcelle',
-        'Activité', 'N° Parcelle', 'Fonction', 'Date Création'
+        'Activité', 'N° Parcelle', 'Fonction', 'Date Création',
+        'Source', 'Envoyé'
     ];
 
     const rows = data.map(c => [
@@ -30,7 +31,9 @@ export const exportToCSV = (data: Complaint[], filters: FilterOptions) => {
         c.activity,
         c.parcel_number,
         c.complaint_function,
-        c.created_at
+        c.created_at,
+        c.source,
+        c.sent_remote ? 'Oui' : 'Non'
     ]);
 
     const csvContent = [
@@ -79,7 +82,9 @@ export const exportToXLSX = (data: Complaint[], filters: FilterOptions) => {
         'Activité': c.activity,
         'N° Parcelle': c.parcel_number,
         'Fonction': c.complaint_function,
-        'Date Création': c.created_at
+        'Date Création': c.created_at,
+        'Source': c.source,
+        'Envoyé': c.sent_remote ? 'Oui' : 'Non'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);

@@ -18,6 +18,8 @@ export interface Complaint {
     complaint_function?: string;
     type_usage?: string;
     nature_parcelle?: string;
+    source?: string;
+    sent_remote?: boolean;
 }
 
 export interface FilterOptions {
