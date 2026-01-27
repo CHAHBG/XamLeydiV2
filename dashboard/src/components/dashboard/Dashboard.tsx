@@ -10,7 +10,7 @@ import { SexChart } from '../charts/SexChart';
 import { TimeSeriesChart } from '../charts/TimeSeriesChart';
 import { ComplaintsTable } from '../tables/ComplaintsTable';
 import { exportToCSV, exportToXLSX } from '../../utils/export';
-import { LayoutDashboard, Users, AlertCircle, FileText, Download, FileSpreadsheet } from 'lucide-react';
+import { Users, AlertCircle, FileText, Download, FileSpreadsheet } from 'lucide-react';
 
 import { Sidebar } from './Sidebar';
 
